@@ -6,7 +6,7 @@
     <title>Catálogo VIP</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .header-titulo { color: #f5c518; font-size: 2.2em; margin-top: 10px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-weight: 900;}
+        .header-titulo { color: #f5c518; font-size: 2.2em; margin-top: 10px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-weight: 900;}
         .ruta-actual { color: #888; margin-bottom: 20px; font-size: 1em; background: #111; padding: 10px 15px; border-radius: 8px; border: 1px solid #222; text-align: center; width: 100%; max-width: 800px; box-sizing: border-box;}
         .ruta-actual b { color: #f5c518; }
         .galeria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: 100%; max-width: 800px; }
@@ -33,30 +33,12 @@
         .reloj-analogo { width: 16px; height: 16px; border: 2px solid white; border-radius: 50%; position: relative; display: inline-block; background-color: rgba(255, 255, 255, 0.15); overflow: hidden; }
         .reloj-analogo .aguja { width: 2px; height: 7px; background: white; position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg); border-radius: 2px; z-index: 10; }
         .reloj-analogo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(white var(--grados, 0deg), transparent var(--grados, 0deg)); z-index: 1; }
-        
         @keyframes titilar { 0% { background: #ff3333; } 50% { background: #990000; transform: scale(1.1); } 100% { background: #ff3333; } }
-
-        /* --- BOTÓN DE NOTIFICACIONES --- */
-        .btn-notificaciones {
-            background: linear-gradient(45deg, #ff3333, #990000);
-            color: white; border: none; padding: 12px 25px; border-radius: 25px;
-            font-size: 1.1em; font-weight: bold; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 51, 51, 0.4); margin-bottom: 20px;
-            transition: transform 0.2s; animation: titilar 2s infinite;
-        }
-        .btn-notificaciones:active { transform: scale(0.95); }
-        .btn-notificaciones.suscrito {
-            background: #333; color: #888; animation: none; cursor: default; box-shadow: none;
-        }
     </style>
 </head>
 <body>
 
     <h1 class="header-titulo">CATÁLOGO VIP</h1>
-    
-    <!-- BOTÓN DE SUSCRIPCIÓN -->
-    <button id="btn-noti" class="btn-notificaciones">🔔 ¡Activar Alertas de Nuevos Videos!</button>
-
     {% if carpeta_actual != '' %}
     <div class="ruta-actual"><a href="/" style="color:#888; text-decoration:none;">Inicio</a> / <b>{{ carpeta_actual }}</b></div>
     {% endif %}
@@ -111,7 +93,7 @@
     </div>
 
     <script>
-        // --- SCRIPT DEL RELOJ ---
+        // SCRIPT DEL RELOJ
         setInterval(() => {
             const ahora = Math.floor(Date.now() / 1000); 
             document.querySelectorAll('.contador-live').forEach(badge => {
@@ -145,84 +127,6 @@
                 }
             });
         }, 1000);
-
-        // --- SISTEMA DE NOTIFICACIONES PUSH ---
-        const btnNoti = document.getElementById('btn-noti');
-
-        // Función matemática para convertir tu Llave Pública
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
-            return outputArray;
-        }
-
-        // Al tocar el botón
-        btnNoti.addEventListener('click', async () => {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                alert("⚠️ Tu navegador o celular no soporta estas alertas. (En iPhone usa Safari).");
-                return;
-            }
-
-            try {
-                // 1. Pedir permiso al usuario
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    alert("❌ Permiso denegado. No te podremos avisar.");
-                    return;
-                }
-
-                btnNoti.innerText = "⏳ Conectando...";
-
-                // 2. Registrar el trabajador en la sombra
-                const register = await navigator.serviceWorker.register('/static/sw.js');
-
-                // 3. Traer tu llave pública desde el servidor
-                const response = await fetch('/api/public_key');
-                const data = await response.json();
-                const publicVapidKey = urlBase64ToUint8Array(data.publicKey);
-
-                // 4. Suscribir el dispositivo
-                const subscription = await register.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: publicVapidKey
-                });
-
-                // 5. Enviar el ID de suscripción a tu app.py para guardarlo
-                await fetch('/api/subscribe', {
-                    method: 'POST',
-                    body: JSON.stringify(subscription),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                // ¡Éxito!
-                btnNoti.innerText = "✅ Alertas Activadas";
-                btnNoti.classList.add('suscrito');
-                btnNoti.disabled = true;
-
-            } catch (error) {
-                console.error(error);
-                alert("Hubo un error al activar las alertas.");
-                btnNoti.innerText = "🔔 Intentar de nuevo";
-            }
-        });
-
-        // Revisar si ya está suscrito para cambiar el botón al cargar la página
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistration().then(reg => {
-                if (reg) {
-                    reg.pushManager.getSubscription().then(sub => {
-                        if (sub) {
-                            btnNoti.innerText = "✅ Alertas Activadas";
-                            btnNoti.classList.add('suscrito');
-                            btnNoti.disabled = true;
-                        }
-                    });
-                }
-            });
-        }
     </script>
 </body>
 </html>
