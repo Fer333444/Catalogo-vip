@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Editor Visual VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .header-titulo { color: #f5c518; font-size: 1.4em; margin-top: 10px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+        .ruta-actual { color: #888; margin-bottom: 20px; font-size: 1em; background: #111; padding: 10px 15px; border-radius: 8px; border: 1px solid #222; text-align: center; width: 100%; max-width: 800px; box-sizing: border-box;}
+        .ruta-actual b { color: #f5c518; }
+        
+        .barra-rapida { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 800px; margin-bottom: 25px; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; box-sizing: border-box;}
+        .barra-rapida form { display: flex; flex-direction: column; gap: 10px; width: 100%;}
+        .barra-titulo { color:#f5c518; font-weight: bold; font-size: 0.9em; margin-bottom: -5px;}
+        input[type="text"], input[type="file"], select { padding: 12px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; font-size: 1em; width: 100%; box-sizing: border-box;}
+        .select-tiempo { background-color: #1a1a1a; border-color: #f5c518; font-weight: bold; }
+        
+        .btn-accion { background: #f5c518; color: #000; font-weight: bold; border: none; padding: 12px 15px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1em; width: 100%;}
+        .btn-accion:active { background: #e0b416; transform: scale(0.98); }
+        .separador { width: 100%; height: 1px; background: #333; margin: 5px 0; }
+
+        .galeria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: 100%; max-width: 800px; }
+        
+        .tarjeta-carpeta, .tarjeta-video { background: #1a1a1a; border: 2px solid #333; border-radius: 12px; display: flex; flex-direction: column; position: relative; box-sizing: border-box; transition: transform 0.4s ease, opacity 0.4s ease;}
+        .tarjeta-carpeta { align-items: center; justify-content: center; padding: 15px; text-decoration: none; aspect-ratio: 9/16; max-height: 350px;}
+        .tarjeta-carpeta:hover { border-color: #f5c518; background: #222; }
+        .icono-carpeta { font-size: 3.5em; margin-bottom: 5px; color: #f5c518; }
+        .titulo-carpeta { color: #f5c518; font-weight: bold; text-transform: uppercase; text-align: center; font-size: 1em; word-break: break-all;}
+
+        .tarjeta-volver { border-style: dashed; border-color: #444; background: transparent;}
+        .tarjeta-volver .icono-carpeta { color: #444; }
+        .tarjeta-volver .titulo-carpeta { color: #888; }
+        
+        .portada-wrapper { width: 100%; aspect-ratio: 9 / 16; background-color: #000; position: relative; overflow: hidden; border-radius: 12px 12px 0 0; box-shadow: inset 0 0 50px rgba(0,0,0,0.8); }
+        .portada-video { position: absolute; top:0; left:0; width: 100%; height: 100%; object-fit: cover; z-index: 2; opacity: 1; transition: opacity 0.3s ease; background: #000; cursor: pointer;}
+        
+        .controles-video { padding: 12px; background: #0a0a0a; border-top: 1px solid #222; border-radius: 0 0 12px 12px; display: flex; flex-direction: column; gap: 8px;}
+        .titulo-video { color: #fff; font-size: 0.85em; text-align: center; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: normal;}
+        
+        .form-mover { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .select-mover { padding: 8px; font-size: 0.8em; border-radius: 6px; height: 38px;}
+        .btn-mover { background: #333; color: #fff; border: 1px solid #555; font-size: 0.9em; cursor: pointer; border-radius: 6px; padding: 0 15px; font-weight: bold; height: 38px;}
+        .btn-mover:active { background: #f5c518; color: #000;}
+
+        .menu-dropdown { position: absolute; top: 8px; left: 8px; z-index: 50; }
+        .btn-puntos { background: rgba(0, 0, 0, 0.8); color: white; border: 1px solid #555; width: 36px; height: 36px; border-radius: 50%; font-size: 1.5em; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; padding-bottom: 5px; box-sizing: border-box; box-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        .dropdown-content { display: none; position: absolute; top: 40px; left: 0; background: #1a1a1a; border: 1px solid #444; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.9); overflow: hidden; min-width: 140px; }
+        .btn-menu-item { width: 100%; text-align: left; padding: 12px 15px; background: transparent; border: none; color: #fff; font-size: 1em; font-weight: bold; cursor: pointer; border-bottom: 1px solid #333;}
+        .btn-eliminar { color: #ff4d4d; border-bottom: none;}
+
+        .badge-tiempo { position: absolute; top: -12px; right: -12px; background: #ff3333; color: white; padding: 6px 12px; border-radius: 25px; font-size: 0.85em; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.6); z-index: 20; border: 3px solid #0a0a0a; display: flex; align-items: center; gap: 7px; letter-spacing: 1.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+        .reloj-analogo { width: 18px; height: 18px; border: 2px solid white; border-radius: 50%; position: relative; display: inline-block; background-color: rgba(255, 255, 255, 0.1); overflow: hidden; }
+        .reloj-analogo .aguja { width: 2px; height: 8px; background: white; position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg); border-radius: 2px; z-index: 10;}
+        .reloj-analogo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(white var(--grados, 0deg), transparent var(--grados, 0deg)); z-index: 1;}
+
+        @keyframes titilar { 0% { background: #ff3333; } 50% { background: #990000; transform: scale(1.1); } 100% { background: #ff3333; } }
+
+        .nav-enlaces { margin-top: 30px; margin-bottom: 20px; display: flex; gap: 20px; }
+        .nav-enlaces a { color: #888; text-decoration: none; font-size: 1em; border-bottom: 1px dashed #888;}
+
+        @media (min-width: 600px) {
+            .barra-rapida { flex-direction: row; align-items: flex-start;}
+            .separador { width: 1px; height: auto; margin: 0 15px; align-self: stretch;}
+            .form-mover { flex-direction: row; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="header-titulo">🎬 MODO EDITOR VIP</h1>
+    
+    <div class="ruta-actual">
+        Explorando: 
+        {% if carpeta_actual == '' %}
+            <b>/ (Carpeta Raíz)</b>
+        {% else %}
+            <a href="/editor-visual" style="color:#888; text-decoration:none;">/Raíz</a> / <b>{{ carpeta_actual }}</b>
+        {% endif %}
+    </div>
+    
+    <div class="barra-rapida">
+        <form action="/admin/crear-carpeta" method="POST">
+            <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+            <div class="barra-titulo">📁 NUEVA SUB-CARPETA:</div>
+            <input type="text" name="nombre_carpeta" placeholder="Nombre (Ej: Acción)" required>
+            <select name="tiempo_limite" class="select-tiempo">
+                <option value="0">∞ Sin Límite de Tiempo</option>
+                <option value="5m">⚡ Autodestrucción en 5 Min</option>
+                <option value="24h">⏳ Autodestrucción en 24H</option>
+                <option value="48h">⏳ Autodestrucción en 48H</option>
+            </select>
+            <button type="submit" class="btn-accion">Crear Carpeta</button>
+        </form>
+        
+        <div class="separador"></div>
+        
+        <form action="/admin/subir-video" method="POST" enctype="multipart/form-data" id="form-subida" onsubmit="mostrarSubiendo()">
+            <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+            <div class="barra-titulo">📤 INYECTAR MEDIA (Video o Foto):</div>
+            <input type="file" name="video_file" accept="video/mp4, video/quicktime, .mov, image/jpeg, image/png, image/gif, image/webp" required>
+            <select name="tiempo_limite" class="select-tiempo">
+                <option value="0">∞ Sin Límite de Tiempo</option>
+                <option value="5m">⚡ Autodestrucción en 5 Min</option>
+                <option value="24h">⏳ Autodestrucción en 24H</option>
+                <option value="48h">⏳ Autodestrucción en 48H</option>
+            </select>
+            <button type="submit" class="btn-accion" id="btn-subir">Subir Archivo</button>
+        </form>
+    </div>
+
+    <form id="form-eliminar" action="/admin/eliminar" method="POST" style="display: none;">
+        <input type="hidden" name="item_ruta" id="eliminar-ruta">
+        <input type="hidden" name="tipo" id="eliminar-tipo">
+        <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+    </form>
+
+    <div class="galeria-grid">
+        
+        {% if carpeta_actual != '' %}
+            {% set partes_ruta = carpeta_actual.split('/') %}
+            {% set ruta_padre = partes_ruta[:-1]|join('/') %}
+            <a href="/editor-visual?carpeta={{ ruta_padre }}" class="tarjeta-carpeta tarjeta-volver">
+                <div class="icono-carpeta">⬅️</div>
+                <div class="titulo-carpeta">Volver Arriba</div>
+            </a>
+        {% endif %}
+
+        {% for carpeta in carpetas %}
+            <a href="/editor-visual?carpeta={{ carpeta.ruta_relativa }}" class="tarjeta-carpeta">
+                {% if carpeta.timestamp_exp > 0 %}
+                    <div class="badge-tiempo contador-live" data-expira="{{ carpeta.timestamp_exp }}" data-total="{{ carpeta.total_segundos }}">
+                        <div class="reloj-analogo"><div class="aguja"></div></div>
+                        <span class="tiempo-texto">--:--</span>
+                    </div>
+                {% endif %}
+                <div class="menu-dropdown" onclick="event.preventDefault(); event.stopPropagation();">
+                    <div class="btn-puntos" onclick="toggleMenu('menu-c-{{ loop.index }}')">⋮</div>
+                    <div id="menu-c-{{ loop.index }}" class="dropdown-content">
+                        <button class="btn-menu-item btn-eliminar" onclick="confirmarEliminacion('{{ carpeta.ruta_relativa }}', 'carpeta', '{{ carpeta.nombre }}')">🗑️ Eliminar</button>
+                    </div>
+                </div>
+                <div class="icono-carpeta">📁</div>
+                <div class="titulo-carpeta">{{ carpeta.nombre }}</div>
+            </a>
+        {% endfor %}
+
+        {% for video in videos %}
+        <div class="tarjeta-video">
+            {% if video.timestamp_exp > 0 %}
+                <div class="badge-tiempo contador-live" data-expira="{{ video.timestamp_exp }}" data-total="{{ video.total_segundos }}">
+                    <div class="reloj-analogo"><div class="aguja"></div></div>
+                    <span class="tiempo-texto">--:--</span>
+                </div>
+            {% endif %}
+
+            <div class="menu-dropdown">
+                <div class="btn-puntos" onclick="toggleMenu('menu-v-{{ loop.index }}')">⋮</div>
+                <div id="menu-v-{{ loop.index }}" class="dropdown-content">
+                    <button class="btn-menu-item" onclick="forzarDescarga('/download/{{ video.ruta_completa_descarga }}', '{{ video.archivo }}', this)">⬇️ Descargar</button>
+                    <button class="btn-menu-item btn-eliminar" onclick="confirmarEliminacion('{{ video.ruta_completa_descarga }}', 'video', '{{ video.titulo }}')">🗑️ Eliminar</button>
+                </div>
+            </div>
+
+            <div class="portada-wrapper">
+                {% if video.tipo == 'foto' %}
+                    <img class="portada-video" src="{{ url_for('static', filename='videos/' + video.ruta_completa_descarga) }}" style="opacity: 1; object-fit: cover;">
+                {% else %}
+                    <video class="portada-video" preload="metadata" muted playsinline loop
+                           onmouseover="this.play(); this.style.opacity=1;"
+                           onmouseout="this.pause(); this.style.opacity=1;"
+                           onclick="if(this.paused){this.play(); this.style.opacity=1;}else{this.pause(); this.style.opacity=1;}">
+                        <source src="{{ url_for('static', filename='videos/' + video.ruta_completa_descarga) }}#t=0.1">
+                    </video>
+                {% endif %}
+            </div>
+            
+            <div class="controles-video">
+                <h3 class="titulo-video">{{ video.titulo }}</h3>
+                <form action="/admin/mover-video" method="POST" class="form-mover">
+                    <input type="hidden" name="video_origen" value="{{ video.ruta_completa_descarga }}">
+                    <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+                    <select name="carpeta_destino" class="select-mover">
+                        {% if carpeta_actual != '' %}<option value="Raiz">⬆️ Sacar a Raíz</option>{% endif %}
+                        {% for c in todas_las_carpetas %}
+                            {% if c != carpeta_actual %}<option value="{{ c }}">➡️ Mover a: {{ c }}</option>{% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn-mover">OK</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <div class="nav-enlaces">
+        <a href="/">Vista Pública</a>
+        <a href="/admin-stats">Estadísticas</a>
+    </div>
+
+    <script>
+        function mostrarSubiendo() {
+            var btn = document.getElementById('btn-subir');
+            btn.innerHTML = '⏳ Subiendo...';
+            btn.style.background = '#888';
+            btn.style.color = '#fff';
+            btn.style.pointerEvents = 'none'; 
+        }
+
+        function toggleMenu(id) {
+            var menu = document.getElementById(id);
+            var estabaAbierto = (menu.style.display === "block");
+            document.querySelectorAll('.dropdown-content').forEach(el => el.style.display = 'none');
+            if (!estabaAbierto) { menu.style.display = "block"; }
+        }
+
+        document.addEventListener('click', function(event) {
+            if (!event.target.matches('.btn-puntos')) {
+                document.querySelectorAll('.dropdown-content').forEach(el => el.style.display = 'none');
+            }
+        });
+
+        // SCRIPT PARA FORZAR DESCARGA DESDE EL EDITOR
+        function forzarDescarga(url, nombreArchivo, btn) {
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '⏳...';
+
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const urlBlob = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = urlBlob;
+                    a.download = nombreArchivo; 
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(urlBlob);
+                    
+                    btn.innerHTML = '✅ OK';
+                    setTimeout(() => { btn.innerHTML = textoOriginal; }, 2000);
+                })
+                .catch(() => {
+                    alert("Error al descargar el archivo. Intenta de nuevo.");
+                    btn.innerHTML = textoOriginal;
+                });
+        }
+
+        function confirmarEliminacion(ruta, tipo, nombre) {
+            let mensaje = tipo === 'carpeta' 
+                ? "⚠️ ATENCIÓN PELIGRO ⚠️\n\n¿Estás SEGURO de eliminar la carpeta '" + nombre + "'?\n\n¡Se borrarán TODOS LOS ARCHIVOS que estén adentro!" 
+                : "¿Deseas eliminar el archivo '" + nombre + "'?";
+            if (confirm(mensaje)) {
+                document.getElementById('eliminar-ruta').value = ruta;
+                document.getElementById('eliminar-tipo').value = tipo;
+                document.getElementById('form-eliminar').submit();
+            }
+        }
+
+        setInterval(() => {
+            const ahora = Math.floor(Date.now() / 1000); 
+            document.querySelectorAll('.contador-live').forEach(badge => {
+                const expira = parseInt(badge.getAttribute('data-expira'));
+                const total = parseInt(badge.getAttribute('data-total'));
+                const restante = expira - ahora;
+
+                if (restante <= 0) {
+                    const tarjeta = badge.closest('.tarjeta-carpeta, .tarjeta-video');
+                    if(tarjeta) {
+                        tarjeta.style.transform = "scale(0)";
+                        tarjeta.style.opacity = "0"; 
+                        setTimeout(() => tarjeta.remove(), 400); 
+                    }
+                } else {
+                    let h = Math.floor(restante / 3600);
+                    let m = Math.floor((restante % 3600) / 60);
+                    let s = restante % 60;
+                    let texto = "";
+                    if (h > 0) texto += (h < 10 ? "0"+h : h) + ":";
+                    texto += (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s);
+                    badge.querySelector('.tiempo-texto').innerText = texto;
+
+                    let pasado = total - restante;
+                    let grados = (pasado / total) * 360;
+                    badge.querySelector('.aguja').style.transform = `translateX(-50%) rotate(${grados}deg)`;
+                    badge.querySelector('.reloj-analogo').style.setProperty('--grados', `${grados}deg`);
+                    
+                    if (restante < 60) { badge.style.animation = "titilar 1s infinite"; } 
+                    else { badge.style.animation = "none"; }
+                }
+            });
+        }, 1000);
+    </script>
+</body>
+</html>

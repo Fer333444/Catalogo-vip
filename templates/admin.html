@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control VIP</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #0a0a0a; 
+            color: #ffffff; 
+            margin: 0; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        
+        .header-top { width: 100%; max-width: 600px; display: flex; justify-content: flex-start; margin-bottom: 20px; }
+        .btn-volver { color: #f5c518; text-decoration: none; font-weight: bold; padding: 5px 10px; border: 1px solid #f5c518; border-radius: 8px; }
+
+        h1 { color: #f5c518; margin-top: 0; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;}
+        .subtitulo { color: #888; margin-bottom: 20px; font-size: 0.9em; }
+        
+        table { 
+            width: 100%; 
+            max-width: 600px; 
+            border-collapse: collapse; 
+            background: #111; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid #222;
+        }
+        
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #222; }
+        th { background-color: #f5c518; color: #000; font-weight: 800; text-transform: uppercase; font-size: 0.9em;}
+        tr:hover { background-color: #1a1a1a; }
+        tr:last-child td { border-bottom: none; }
+        
+        .nombre-archivo { color: #888; font-size: 0.85em; }
+        
+        .badge { 
+            background-color: #f5c518; 
+            color: #000; 
+            padding: 5px 12px; 
+            border-radius: 20px; 
+            font-weight: 900; 
+            font-size: 1em; 
+            display: inline-block;
+        }
+
+        .caja-informacion {
+            margin-top: 30px;
+            background: #111;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px dashed #444;
+            max-width: 600px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-top">
+        <a href="/" class="btn-volver">🔙 Ver Web Pública</a>
+    </div>
+
+    <h1>📊 Descargas de Hoy</h1>
+    <p class="subtitulo">Fecha actual registrada: <b>{{ fecha }}</b></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Video</th>
+                <th style="text-align: center;">Descargas</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for video in videos %}
+            <tr>
+                <td>
+                    <strong>{{ video.titulo }}</strong><br>
+                    <span class="nombre-archivo">{{ video.archivo }}</span>
+                </td>
+                <td style="text-align: center;">
+                    <span class="badge">{{ video.descargas }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="caja-informacion">
+        <h3 style="color: #f5c518; margin-top: 0;">📁 Tus Informes Diarios</h3>
+        <p style="font-size: 0.9em; color: #aaa; margin-bottom: 0;">
+            El sistema ya está automatizado. Cada día después de la medianoche, estos contadores regresarán a cero. Los resultados de días anteriores se guardan como archivos de texto en tu computadora dentro de la nueva carpeta <b>informes_diarios</b>.
+        </p>
+    </div>
+
+</body>
+</html>

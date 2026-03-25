@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ video.titulo }} - VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; text-align: center; padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .header-top { width: 100%; max-width: 400px; display: flex; justify-content: flex-start; margin-bottom: 15px; }
+        .btn-volver { color: #f5c518; text-decoration: none; font-size: 1.1em; font-weight: bold; padding: 5px 10px; border: 1px solid #f5c518; border-radius: 8px; transition: background-color 0.2s, color 0.2s; }
+        .btn-volver:hover { background-color: #f5c518; color: #0a0a0a; }
+
+        .card { width: 100%; max-width: 400px; background: #111; padding: 25px 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 1px solid #222; box-sizing: border-box; }
+        h1 { color: #f5c518; font-size: 1.5em; margin-top: 0; margin-bottom: 20px; word-break: break-word;}
+        
+        .video-wrapper { border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 5px 15px rgba(245, 197, 24, 0.15); margin-bottom: 20px; }
+        .media-elemento { width: 100%; display: block; max-height: 60vh; object-fit: contain; }
+
+        .btn-descarga { display: block; width: 100%; background-color: #f5c518; color: #0a0a0a; text-decoration: none; padding: 18px 0; font-size: 1.2em; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 197, 24, 0.3); border: none; cursor: pointer; transition: transform 0.2s, background-color 0.2s, opacity 0.2s; }
+        .btn-descarga:active { transform: scale(0.96); background-color: #e0b416; }
+        .btn-descarga:disabled { background-color: #888; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .nota-aclaratoria { margin-top: 15px; font-size: 0.9em; color: #aaa; line-height: 1.4; }
+        .nota-aclaratoria b { color: #f5c518; }
+    </style>
+</head>
+<body>
+
+    <div class="header-top">
+        <a href="javascript:history.back()" class="btn-volver">🔙 Volver</a>
+    </div>
+
+    <div class="card">
+        <h1>{{ video.titulo }}</h1>
+        
+        <div class="video-wrapper">
+            {% if video.tipo == 'foto' %}
+                <img src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}" class="media-elemento">
+            {% else %}
+                <video controls playsinline autoplay class="media-elemento">
+                    <source src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}">
+                </video>
+            {% endif %}
+        </div>
+
+        <button onclick="guardarVideo()" class="btn-descarga" id="btnGuardar">
+            ⬇️ Guardar en Galería
+        </button>
+
+        <p class="nota-aclaratoria" id="textoAyuda">
+            Toca el botón para descargar el material a tu dispositivo.
+        </p>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const esIphone = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (esIphone) {
+                document.getElementById('textoAyuda').innerHTML = 'En el menú, elige <b>"Guardar en Fotos"</b> o <b>"Guardar Video"</b>.';
+            } else {
+                document.getElementById('textoAyuda').innerHTML = 'El archivo se descargará y aparecerá en tu <b>Galería</b> de forma automática.';
+            }
+        };
+
+        async function guardarVideo() {
+            const btn = document.getElementById('btnGuardar');
+            const textoOriginal = btn.innerText;
+            const esIphone = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            btn.innerText = "⏳ Procesando...";
+            btn.disabled = true;
+            btn.style.opacity = '0.8';
+
+            const urlSegura = "/download/{{ video.ruta_relativa }}?t=" + new Date().getTime();
+            const nombreArchivo = "{{ video.archivo }}";
+
+            try {
+                // RUTA IPHONE (Usa Share API para guardar directo)
+                if (esIphone) {
+                    const isFoto = "{{ video.tipo }}" === "foto";
+                    const mimeType = isFoto ? 'image/jpeg' : 'video/mp4'; 
+                    
+                    const response = await fetch(urlSegura);
+                    const blob = await response.blob();
+                    const file = new File([blob], nombreArchivo, { type: mimeType });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: '{{ video.titulo }}' });
+                        btn.innerText = "✅ ¡Listo!";
+                        restaurarBoton(btn, textoOriginal);
+                    } else {
+                        // Respaldo por si falla el Share API en iPhone
+                        descargaSilenciosaBlob(urlSegura, nombreArchivo, btn, textoOriginal);
+                    }
+                } 
+                // RUTA ANDROID / PC (Fuerza la descarga sin abrir otra pestaña)
+                else {
+                    descargaSilenciosaBlob(urlSegura, nombreArchivo, btn, textoOriginal);
+                }
+            } catch (error) {
+                console.error("Error en la descarga principal:", error);
+                // Intento final de emergencia
+                descargaSilenciosaBlob(urlSegura, nombreArchivo, btn, textoOriginal);
+            }
+        }
+
+        function descargaSilenciosaBlob(url, nombreArchivo, btn, textoOriginal) {
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const urlBlob = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = urlBlob;
+                    a.download = nombreArchivo; 
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(urlBlob);
+                    
+                    btn.innerText = '✅ ¡Descargado!';
+                    restaurarBoton(btn, textoOriginal);
+                })
+                .catch(() => {
+                    alert("Error al descargar el archivo. Intenta de nuevo.");
+                    restaurarBoton(btn, textoOriginal);
+                });
+        }
+
+        function restaurarBoton(btn, textoOriginal) {
+            setTimeout(() => { 
+                btn.innerText = textoOriginal; 
+                btn.disabled = false; 
+                btn.style.opacity = '1';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

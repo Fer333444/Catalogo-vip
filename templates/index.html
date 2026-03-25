@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Catálogo VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .header-titulo { color: #f5c518; font-size: 2.2em; margin-top: 10px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-weight: 900;}
+        .ruta-actual { color: #888; margin-bottom: 20px; font-size: 1em; background: #111; padding: 10px 15px; border-radius: 8px; border: 1px solid #222; text-align: center; width: 100%; max-width: 800px; box-sizing: border-box;}
+        .ruta-actual b { color: #f5c518; }
+        .galeria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: 100%; max-width: 800px; }
+        
+        .tarjeta-carpeta, .tarjeta-video { background: #1a1a1a; border: 2px solid #333; border-radius: 12px; display: flex; flex-direction: column; position: relative; aspect-ratio: 9/16; max-height: 350px; text-decoration: none; transition: transform 0.3s ease, opacity 0.3s ease;}
+        .tarjeta-carpeta { align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;}
+        .tarjeta-carpeta:hover, .tarjeta-video:hover { transform: translateY(-3px); border-color: #f5c518;}
+        .icono-carpeta { font-size: 4.5em; margin-bottom: 10px; color: #f5c518; }
+        .titulo-carpeta { color: #f5c518; font-weight: bold; text-transform: uppercase; text-align: center; font-size: 1.1em; word-break: break-all;}
+        
+        .tarjeta-volver { border-style: dashed; border-color: #444; background: transparent;}
+        .tarjeta-volver .icono-carpeta { color: #444; }
+        .tarjeta-volver .titulo-carpeta { color: #888; }
+        .tarjeta-volver:hover { border-color: #888; background: #111;}
+
+        .portada-wrapper { width: 100%; flex: 1; background-color: #000; position: relative; overflow: hidden; border-radius: 12px 12px 0 0;}
+        .portada-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        
+        .icono-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(56, 122, 223, 0.9); color: white; padding: 12px 18px; border-radius: 10px; font-size: 1.8em; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: 0.2s; z-index: 10;}
+        .tarjeta-video:hover .icono-play { background: rgba(56, 122, 223, 1); transform: translate(-50%, -50%) scale(1.1); }
+        .titulo-video { color: #fff; font-size: 0.9em; text-align: center; padding: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #0a0a0a; font-weight: bold; border-radius: 0 0 12px 12px;}
+
+        .badge-tiempo { position: absolute; top: 8px; right: 8px; background: #ff3333; color: white; padding: 6px 12px; border-radius: 25px; font-size: 0.85em; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.8); z-index: 20; border: 2px solid #0a0a0a; display: flex; align-items: center; gap: 7px; letter-spacing: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+        .reloj-analogo { width: 16px; height: 16px; border: 2px solid white; border-radius: 50%; position: relative; display: inline-block; background-color: rgba(255, 255, 255, 0.15); overflow: hidden; }
+        .reloj-analogo .aguja { width: 2px; height: 7px; background: white; position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg); border-radius: 2px; z-index: 10; }
+        .reloj-analogo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(white var(--grados, 0deg), transparent var(--grados, 0deg)); z-index: 1; }
+        @keyframes titilar { 0% { background: #ff3333; } 50% { background: #990000; transform: scale(1.1); } 100% { background: #ff3333; } }
+    </style>
+</head>
+<body>
+
+    <h1 class="header-titulo">CATÁLOGO VIP</h1>
+    {% if carpeta_actual != '' %}
+    <div class="ruta-actual"><a href="/" style="color:#888; text-decoration:none;">Inicio</a> / <b>{{ carpeta_actual }}</b></div>
+    {% endif %}
+
+    <div class="galeria-grid">
+        {% if carpeta_actual != '' %}
+            {% set partes_ruta = carpeta_actual.split('/') %}
+            {% set ruta_padre = partes_ruta[:-1]|join('/') %}
+            <a href="/?carpeta={{ ruta_padre }}" class="tarjeta-carpeta tarjeta-volver">
+                <div class="icono-carpeta">⬅️</div>
+                <div class="titulo-carpeta">Volver</div>
+            </a>
+        {% endif %}
+
+        {% for carpeta in carpetas %}
+            <a href="/?carpeta={{ carpeta.ruta_relativa }}" class="tarjeta-carpeta">
+                {% if carpeta.timestamp_exp > 0 %}
+                    <div class="badge-tiempo contador-live" data-expira="{{ carpeta.timestamp_exp }}" data-total="{{ carpeta.total_segundos }}">
+                        <div class="reloj-analogo"><div class="aguja"></div></div>
+                        <span class="tiempo-texto">--:--</span>
+                    </div>
+                {% endif %}
+                <div class="icono-carpeta">📁</div>
+                <div class="titulo-carpeta">{{ carpeta.nombre }}</div>
+            </a>
+        {% endfor %}
+
+        {% for video in videos %}
+        <div class="tarjeta-video">
+            {% if video.timestamp_exp > 0 %}
+                <div class="badge-tiempo contador-live" data-expira="{{ video.timestamp_exp }}" data-total="{{ video.total_segundos }}">
+                    <div class="reloj-analogo"><div class="aguja"></div></div>
+                    <span class="tiempo-texto">--:--</span>
+                </div>
+            {% endif %}
+
+            <a href="/ver/{{ video.ruta_completa_descarga }}" style="display:block; flex:1; display:flex; flex-direction:column; text-decoration:none;">
+                <div class="portada-wrapper">
+                    {% if video.tipo == 'foto' %}
+                        <img class="portada-video" src="{{ url_for('static', filename='videos/' + video.ruta_completa_descarga) }}" style="object-fit: cover;">
+                    {% else %}
+                        <video class="portada-video" preload="metadata" muted playsinline>
+                            <source src="{{ url_for('static', filename='videos/' + video.ruta_completa_descarga) }}#t=0.1">
+                        </video>
+                        <div class="icono-play">▶</div>
+                    {% endif %}
+                </div>
+                <h3 class="titulo-video">{{ video.titulo }}</h3>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // SCRIPT DEL RELOJ
+        setInterval(() => {
+            const ahora = Math.floor(Date.now() / 1000); 
+            document.querySelectorAll('.contador-live').forEach(badge => {
+                const expira = parseInt(badge.getAttribute('data-expira'));
+                const total = parseInt(badge.getAttribute('data-total'));
+                const restante = expira - ahora;
+
+                if (restante <= 0) {
+                    const tarjeta = badge.closest('.tarjeta-carpeta, .tarjeta-video');
+                    if(tarjeta) {
+                        tarjeta.style.transform = "scale(0)";
+                        tarjeta.style.opacity = "0"; 
+                        setTimeout(() => tarjeta.remove(), 400); 
+                    }
+                } else {
+                    let h = Math.floor(restante / 3600);
+                    let m = Math.floor((restante % 3600) / 60);
+                    let s = restante % 60;
+                    let texto = "";
+                    if (h > 0) texto += (h < 10 ? "0"+h : h) + ":";
+                    texto += (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s);
+                    badge.querySelector('.tiempo-texto').innerText = texto;
+
+                    let pasado = total - restante;
+                    let grados = (pasado / total) * 360;
+                    badge.querySelector('.aguja').style.transform = `translateX(-50%) rotate(${grados}deg)`;
+                    badge.querySelector('.reloj-analogo').style.setProperty('--grados', `${grados}deg`);
+                    
+                    if (restante < 60) { badge.style.animation = "titilar 1s infinite"; } 
+                    else { badge.style.animation = "none"; }
+                }
+            });
+        }, 1000);
+    </script>
+</body>
+</html>
