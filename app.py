@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory, request, redirect, url_for
+from flask import Flask, render_template, send_from_directory, request, redirect, url_for, make_response
 from werkzeug.utils import secure_filename
 import json
 import os
@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 cerrojo_stats = threading.Lock()
 ARCHIVO_STATS = 'stats.json'
-ARCHIVO_EXPIRACIONES = 'expiraciones.json'
+ARCHIVO_EXPIRACIONES = 'expiraciones.json' 
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
@@ -182,15 +182,14 @@ def ver_video(ruta_video):
     video_seleccionado = {"titulo": titulo_limpio, "archivo": os.path.basename(ruta_video), "ruta_relativa": ruta_video, "tipo": tipo_media}
     return render_template('reproductor.html', video=video_seleccionado)
 
-# --- AQUÍ ESTÁ EL TRUCO DE LA HORA PARA LA GALERÍA ---
+# --- DESCARGA CON ACTUALIZACIÓN DE HORA Y ANTI-CACHÉ ---
 @app.route('/download/<path:filename>')
 def download_video(filename):
     nombre_limpio_archivo = os.path.basename(filename)
     ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, filename)
     
-    # Actualiza la fecha del archivo a "AHORA" para que salga de primero en la galería
     if os.path.exists(ruta_fisica):
-        os.utime(ruta_fisica, None)
+        os.utime(ruta_fisica, None) # Adelanta la fecha del archivo a AHORA
         
     with cerrojo_stats:
         data = cargar_estadisticas()
@@ -199,7 +198,11 @@ def download_video(filename):
         data["descargas"] = descargas
         guardar_estadisticas(data)
         
-    return send_from_directory(CARPETA_VIDEOS_RAIZ, filename, as_attachment=True)
+    respuesta = make_response(send_from_directory(CARPETA_VIDEOS_RAIZ, filename, as_attachment=True))
+    respuesta.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    respuesta.headers["Pragma"] = "no-cache"
+    respuesta.headers["Expires"] = "0"
+    return respuesta
 
 @app.route('/admin-stats')
 def panel_admin_stats():
