@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 cerrojo_stats = threading.Lock()
 ARCHIVO_STATS = 'stats.json'
-ARCHIVO_EXPIRACIONES = 'expiraciones.json' 
+ARCHIVO_EXPIRACIONES = 'expiraciones.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
@@ -263,7 +263,7 @@ def mover_video():
                 exp = cargar_expiraciones()
                 if ruta_video_origen_web in exp:
                     carpeta_limpia = carpeta_destino_web if carpeta_destino_web != "Raiz" else ""
-                    # ESTA ES LA LÍNEA QUE TENÍA EL ERROR Y AHORA ESTÁ PERFECTA:
+                    # LÍNEA CORREGIDA
                     nueva_ruta_relativa = os.path.join(carpeta_limpia, nombre_archivo).replace('\\', '/')
                     exp[nueva_ruta_relativa] = exp.pop(ruta_video_origen_web)
                     guardar_expiraciones(exp)
