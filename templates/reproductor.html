@@ -58,7 +58,7 @@
             if (esIphone) {
                 document.getElementById('textoAyuda').innerHTML = 'En el menú, elige <b>"Guardar en Fotos"</b> o <b>"Guardar Video"</b>.';
             } else {
-                document.getElementById('textoAyuda').innerHTML = 'El archivo se descargará y aparecerá en tu <b>Galería</b> de forma automática.';
+                document.getElementById('textoAyuda').innerHTML = 'El archivo se descargará y aparecerá al principio de tu <b>Galería</b>.';
             }
         };
 
@@ -72,66 +72,38 @@
             btn.style.opacity = '0.8';
 
             const urlSegura = "/download/{{ video.ruta_relativa }}?t=" + new Date().getTime();
-            const nombreArchivo = "{{ video.archivo }}";
 
-            try {
-                // RUTA IPHONE (Usa Share API para guardar directo)
-                if (esIphone) {
+            if (esIphone) {
+                try {
                     const isFoto = "{{ video.tipo }}" === "foto";
                     const mimeType = isFoto ? 'image/jpeg' : 'video/mp4'; 
                     
                     const response = await fetch(urlSegura);
                     const blob = await response.blob();
-                    const file = new File([blob], nombreArchivo, { type: mimeType });
+                    const file = new File([blob], "{{ video.archivo }}", { type: mimeType });
 
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
                         await navigator.share({ files: [file], title: '{{ video.titulo }}' });
                         btn.innerText = "✅ ¡Listo!";
-                        restaurarBoton(btn, textoOriginal);
+                        setTimeout(() => { btn.innerText = textoOriginal; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
                     } else {
-                        // Respaldo por si falla el Share API en iPhone
-                        descargaSilenciosaBlob(urlSegura, nombreArchivo, btn, textoOriginal);
+                        window.location.href = urlSegura;
+                        setTimeout(() => { btn.innerText = textoOriginal; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
                     }
-                } 
-                // RUTA ANDROID / PC (Fuerza la descarga sin abrir otra pestaña)
-                else {
-                    descargaSilenciosaBlob(urlSegura, nombreArchivo, btn, textoOriginal);
+                } catch (error) {
+                    window.location.href = urlSegura;
+                    setTimeout(() => { btn.innerText = textoOriginal; btn.disabled = false; btn.style.opacity = '1'; }, 3000);
                 }
-            } catch (error) {
-                console.error("Error en la descarga principal:", error);
-                // Intento final de emergencia
-                descargaSilenciosaBlob(urlSegura, nombreArchivo, btn, textoOriginal);
+            } else {
+                // SOLUCIÓN ANDROID / PC: Descarga nativa directa. Evita el colapso de RAM.
+                window.location.href = urlSegura;
+                btn.innerText = "⬇️ Descargando...";
+                setTimeout(() => { 
+                    btn.innerText = textoOriginal; 
+                    btn.disabled = false; 
+                    btn.style.opacity = '1';
+                }, 3000);
             }
-        }
-
-        function descargaSilenciosaBlob(url, nombreArchivo, btn, textoOriginal) {
-            fetch(url)
-                .then(response => response.blob())
-                .then(blob => {
-                    const urlBlob = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = urlBlob;
-                    a.download = nombreArchivo; 
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(urlBlob);
-                    
-                    btn.innerText = '✅ ¡Descargado!';
-                    restaurarBoton(btn, textoOriginal);
-                })
-                .catch(() => {
-                    alert("Error al descargar el archivo. Intenta de nuevo.");
-                    restaurarBoton(btn, textoOriginal);
-                });
-        }
-
-        function restaurarBoton(btn, textoOriginal) {
-            setTimeout(() => { 
-                btn.innerText = textoOriginal; 
-                btn.disabled = false; 
-                btn.style.opacity = '1';
-            }, 3000);
         }
     </script>
 </body>

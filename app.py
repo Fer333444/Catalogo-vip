@@ -104,7 +104,6 @@ def obtener_siguiente_numero():
     for root, dirs, files in os.walk(CARPETA_VIDEOS_RAIZ):
         for file in files:
             nombre, ext = os.path.splitext(file)
-            # Buscamos archivos que empiecen con 'video_' para saber cuál es el último número
             if nombre.lower().startswith('video_'):
                 partes = nombre.split('_')
                 if len(partes) >= 2:
@@ -183,15 +182,23 @@ def ver_video(ruta_video):
     video_seleccionado = {"titulo": titulo_limpio, "archivo": os.path.basename(ruta_video), "ruta_relativa": ruta_video, "tipo": tipo_media}
     return render_template('reproductor.html', video=video_seleccionado)
 
+# --- AQUÍ ESTÁ EL TRUCO DE LA HORA PARA LA GALERÍA ---
 @app.route('/download/<path:filename>')
 def download_video(filename):
     nombre_limpio_archivo = os.path.basename(filename)
+    ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, filename)
+    
+    # Actualiza la fecha del archivo a "AHORA" para que salga de primero en la galería
+    if os.path.exists(ruta_fisica):
+        os.utime(ruta_fisica, None)
+        
     with cerrojo_stats:
         data = cargar_estadisticas()
         descargas = data["descargas"]
         descargas[nombre_limpio_archivo] = descargas.get(nombre_limpio_archivo, 0) + 1
         data["descargas"] = descargas
         guardar_estadisticas(data)
+        
     return send_from_directory(CARPETA_VIDEOS_RAIZ, filename, as_attachment=True)
 
 @app.route('/admin-stats')
@@ -242,14 +249,12 @@ def subir_video():
         ext_original = os.path.splitext(video_file.filename)[1].lower()
         ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
         
-        # --- AQUÍ ESTÁ LA NUEVA LÓGICA DE NOMBRES AUTOMÁTICOS ---
         siguiente_num = obtener_siguiente_numero()
         nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
         
         ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
         ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
         
-        # Guardamos el archivo con el nuevo nombre (ej: video_1.mp4)
         video_file.save(ruta_fisica_guardado)
 
         if tiempo_limite != '0':
