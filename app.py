@@ -345,4 +345,9 @@ def mover_video():
                 exp = cargar_expiraciones()
                 if ruta_video_origen_web in exp:
                     carpeta_limpia = carpeta_destino_web if carpeta_destino_web != "Raiz" else ""
-                    nueva_ruta_relativa = os.path.join(carpeta_limpia,
+                    # ¡AQUÍ ESTABA EL ERROR! ESTA ES LA LÍNEA CORRECTA:
+                    nueva_ruta_relativa = os.path.join(carpeta_limpia, nombre_archivo).replace('\\', '/')
+                    exp[nueva_ruta_relativa] = exp.pop(ruta_video_origen_web)
+                    guardar_expiraciones(exp)
+                
+    return redirect(url_for('editor_visual', carpeta=carpeta_vista_actual))
