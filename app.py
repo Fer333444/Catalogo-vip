@@ -98,7 +98,24 @@ def generar_informe(data_vieja):
 def guardar_estadisticas(data):
     with open(ARCHIVO_STATS, 'w') as f: json.dump(data, f)
 
-# --- ESCÁNER JERÁRQUICO (FOTOS + VIDEOS) ---
+# --- ESCÁNER JERÁRQUICO Y RENOMBRAMIENTO ---
+def obtener_siguiente_numero():
+    max_num = 0
+    for root, dirs, files in os.walk(CARPETA_VIDEOS_RAIZ):
+        for file in files:
+            nombre, ext = os.path.splitext(file)
+            # Buscamos archivos que empiecen con 'video_' para saber cuál es el último número
+            if nombre.lower().startswith('video_'):
+                partes = nombre.split('_')
+                if len(partes) >= 2:
+                    try:
+                        num = int(partes[1])
+                        if num > max_num:
+                            max_num = num
+                    except ValueError:
+                        pass
+    return max_num + 1
+
 def escanear_contenido_carpeta(subcarpeta_relativa=''):
     ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, subcarpeta_relativa)
     if not os.path.commonprefix([os.path.abspath(ruta_fisica), os.path.abspath(CARPETA_VIDEOS_RAIZ)]) == os.path.abspath(CARPETA_VIDEOS_RAIZ):
@@ -222,16 +239,17 @@ def subir_video():
     tiempo_limite = request.form.get('tiempo_limite', '0')
     
     if video_file and video_file.filename.lower().endswith(EXT_MEDIA):
-        nombre_archivo_seguro = secure_filename(video_file.filename)
-        ext = os.path.splitext(nombre_archivo_seguro)[1].lower() if nombre_archivo_seguro else ''
+        ext_original = os.path.splitext(video_file.filename)[1].lower()
+        ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
         
-        if not nombre_archivo_seguro or ext not in EXT_MEDIA:
-            ext_original = os.path.splitext(video_file.filename)[1].lower()
-            ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
-            nombre_archivo_seguro = f"media_{int(time.time())}{ext_final}"
-            
+        # --- AQUÍ ESTÁ LA NUEVA LÓGICA DE NOMBRES AUTOMÁTICOS ---
+        siguiente_num = obtener_siguiente_numero()
+        nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
+        
         ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
         ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
+        
+        # Guardamos el archivo con el nuevo nombre (ej: video_1.mp4)
         video_file.save(ruta_fisica_guardado)
 
         if tiempo_limite != '0':
@@ -263,7 +281,6 @@ def mover_video():
                 exp = cargar_expiraciones()
                 if ruta_video_origen_web in exp:
                     carpeta_limpia = carpeta_destino_web if carpeta_destino_web != "Raiz" else ""
-                    # LÍNEA CORREGIDA
                     nueva_ruta_relativa = os.path.join(carpeta_limpia, nombre_archivo).replace('\\', '/')
                     exp[nueva_ruta_relativa] = exp.pop(ruta_video_origen_web)
                     guardar_expiraciones(exp)
