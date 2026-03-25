@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 cerrojo_stats = threading.Lock()
 ARCHIVO_STATS = 'stats.json'
-ARCHIVO_EXPIRACIONES = 'expiraciones.json' 
+ARCHIVO_EXPIRACIONES = 'expiraciones.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
@@ -189,7 +189,7 @@ def download_video(filename):
     ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, filename)
     
     if os.path.exists(ruta_fisica):
-        os.utime(ruta_fisica, None) # Adelanta la fecha del archivo a AHORA
+        os.utime(ruta_fisica, None)
         
     with cerrojo_stats:
         data = cargar_estadisticas()
@@ -242,27 +242,39 @@ def crear_carpeta():
                 guardar_expiraciones(exp)
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
 
+# --- AQUÍ ESTÁ LA NUEVA LÓGICA DE SUBIDA MÚLTIPLE ---
 @app.route('/admin/subir-video', methods=['POST'])
 def subir_video():
     carpeta_actual = request.form.get('carpeta_actual', '')
-    video_file = request.files.get('video_file')
+    # Ahora recibe una lista de videos
+    videos_files = request.files.getlist('video_file') 
     tiempo_limite = request.form.get('tiempo_limite', '0')
     
-    if video_file and video_file.filename.lower().endswith(EXT_MEDIA):
-        ext_original = os.path.splitext(video_file.filename)[1].lower()
-        ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
-        
+    if videos_files:
         siguiente_num = obtener_siguiente_numero()
-        nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
+        exp = cargar_expiraciones()
+        modificado = False
         
-        ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
-        ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
-        
-        video_file.save(ruta_fisica_guardado)
+        for video_file in videos_files:
+            if video_file and video_file.filename.lower().endswith(EXT_MEDIA):
+                ext_original = os.path.splitext(video_file.filename)[1].lower()
+                ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
+                
+                # Nombra automáticamente: video_1, video_2...
+                nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
+                siguiente_num += 1
+                
+                ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
+                ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
+                
+                video_file.save(ruta_fisica_guardado)
 
-        if tiempo_limite != '0':
-            exp = cargar_expiraciones()
-            exp[ruta_relativa] = {"tipo": "archivo", "limite": tiempo_limite, "creacion": time.time()}
+                # Aplica el mismo horario a todos
+                if tiempo_limite != '0':
+                    exp[ruta_relativa] = {"tipo": "archivo", "limite": tiempo_limite, "creacion": time.time()}
+                    modificado = True
+                    
+        if modificado:
             guardar_expiraciones(exp)
         
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
