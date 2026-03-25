@@ -6,12 +6,14 @@ import shutil
 import threading
 import time
 from datetime import datetime
+from pywebpush import webpush, WebPushException
 
 app = Flask(__name__)
 
 cerrojo_stats = threading.Lock()
 ARCHIVO_STATS = 'stats.json'
 ARCHIVO_EXPIRACIONES = 'expiraciones.json' 
+ARCHIVO_SUSCRIPCIONES = 'suscripciones.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
@@ -22,6 +24,52 @@ EXT_MEDIA = EXT_VIDEOS + EXT_FOTOS
 
 for carpeta in [CARPETA_INFORMES, CARPETA_VIDEOS_RAIZ]:
     if not os.path.exists(carpeta): os.makedirs(carpeta)
+
+# --- CONFIGURACIÓN NOTIFICACIONES PUSH ---
+# ¡REEMPLAZA ESTO CON LAS LLAVES QUE ACABAS DE GENERAR!
+VAPID_PUBLIC_KEY = "BOEfjJB0i4w8REB8k1XdfGSFPYgB3S8TMT0whlxW2g4YN75hyu-E_3jpIGu_WLMkN2gXUfNNzB9fzV2AxKNuCrs"
+VAPID_PRIVATE_KEY = "tvdmr-xvbyPW7VHIIJ3fBNYvtOBMV1kGyw8P1k0oWhc"
+VAPID_CLAIMS = {"sub": "mailto:admin@tu-sitio.com"} # Puede ser cualquier correo tuyo, es por regla de seguridad
+
+# --- SISTEMA DE NOTIFICACIONES ---
+def cargar_suscripciones():
+    if os.path.exists(ARCHIVO_SUSCRIPCIONES):
+        with open(ARCHIVO_SUSCRIPCIONES, 'r') as f:
+            try: return json.load(f)
+            except: return []
+    return []
+
+def guardar_suscripciones(data):
+    with open(ARCHIVO_SUSCRIPCIONES, 'w') as f: json.dump(data, f)
+
+def enviar_notificacion_a_todos(titulo, mensaje, url_destino):
+    suscripciones = cargar_suscripciones()
+    if not suscripciones: return
+
+    payload = json.dumps({
+        "title": titulo,
+        "body": mensaje,
+        "url": url_destino
+    })
+
+    suscripciones_activas = []
+    for sub in suscripciones:
+        try:
+            webpush(
+                subscription_info=sub,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+            suscripciones_activas.append(sub)
+        except WebPushException as ex:
+            # Si da error (ej. el usuario bloqueó las notificaciones después), lo ignoramos
+            print(f"Suscripción inactiva removida: {repr(ex)}")
+
+    # Guardamos solo a los que siguen activos para mantener la base limpia
+    if len(suscripciones_activas) != len(suscripciones):
+        guardar_suscripciones(suscripciones_activas)
+
 
 # --- SISTEMA DE AUTODESTRUCCIÓN ---
 def cargar_expiraciones():
@@ -166,7 +214,6 @@ def ver_video(ruta_video):
     video_seleccionado = {"titulo": titulo_limpio, "archivo": os.path.basename(ruta_video), "ruta_relativa": ruta_video, "tipo": tipo_media}
     return render_template('reproductor.html', video=video_seleccionado)
 
-# --- RUTA PARA DESCARGAR BLINDADA CON TIPO DE MEDIO ---
 @app.route('/download/<path:filename>')
 def download_video(filename):
     nombre_limpio_archivo = os.path.basename(filename)
@@ -176,7 +223,6 @@ def download_video(filename):
         descargas[nombre_limpio_archivo] = descargas.get(nombre_limpio_archivo, 0) + 1
         data["descargas"] = descargas
         guardar_estadisticas(data)
-    # Envía el archivo como adjunto para forzar descarga
     return send_from_directory(CARPETA_VIDEOS_RAIZ, filename, as_attachment=True)
 
 @app.route('/admin-stats')
@@ -189,6 +235,32 @@ def panel_admin_stats():
     for v in catalogo_flat:
         datos_completos.append({"titulo": v['titulo'], "carpeta": v['carpeta'], "archivo": v['archivo'], "descargas": descargas.get(v['archivo'], 0)})
     return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy)
+
+# --- RUTAS DE NOTIFICACIONES PUSH (NUEVO) ---
+@app.route('/api/public_key', methods=['GET'])
+def public_key():
+    return app.response_class(
+        response=json.dumps({"publicKey": VAPID_PUBLIC_KEY}),
+        status=200,
+        mimetype="application/json"
+    )
+
+@app.route('/api/subscribe', methods=['POST'])
+def subscribe():
+    suscripcion_info = request.get_json()
+    if not suscripcion_info:
+        return "Error", 400
+
+    suscripciones = cargar_suscripciones()
+    if suscripcion_info not in suscripciones:
+        suscripciones.append(suscripcion_info)
+        guardar_suscripciones(suscripciones)
+
+    return app.response_class(
+        response=json.dumps({"status": "success"}),
+        status=201,
+        mimetype="application/json"
+    )
 
 # --- RUTAS DEL EDITOR ---
 @app.route('/editor-visual')
@@ -240,6 +312,14 @@ def subir_video():
             exp = cargar_expiraciones()
             exp[ruta_relativa] = {"tipo": "archivo", "limite": tiempo_limite, "creacion": time.time()}
             guardar_expiraciones(exp)
+
+        # ¡AQUÍ SE DISPARA LA NOTIFICACIÓN AUTOMÁTICA!
+        titulo_limpio = nombre_archivo_seguro.rsplit('.', 1)[0].replace('_', ' ')
+        enviar_notificacion_a_todos(
+            titulo="🔥 ¡Nuevo contenido subido!",
+            mensaje=f"Se acaba de agregar: {titulo_limpio}. ¡Entra a verlo rápido!",
+            url_destino=f"/?carpeta={carpeta_actual}"
+        )
         
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
@@ -265,32 +345,4 @@ def mover_video():
                 exp = cargar_expiraciones()
                 if ruta_video_origen_web in exp:
                     carpeta_limpia = carpeta_destino_web if carpeta_destino_web != "Raiz" else ""
-                    nueva_ruta_relativa = os.path.join(carpeta_limpia, nombre_archivo).replace('\\', '/')
-                    exp[nueva_ruta_relativa] = exp.pop(ruta_video_origen_web)
-                    guardar_expiraciones(exp)
-                
-    return redirect(url_for('editor_visual', carpeta=carpeta_vista_actual))
-
-@app.route('/admin/eliminar', methods=['POST'])
-def eliminar_item():
-    item_ruta = request.form.get('item_ruta') 
-    tipo = request.form.get('tipo') 
-    carpeta_actual = request.form.get('carpeta_actual', '')
-
-    if item_ruta and tipo:
-        ruta_fisica_abs = os.path.join(CARPETA_VIDEOS_RAIZ, item_ruta)
-        if os.path.commonprefix([os.path.abspath(ruta_fisica_abs), os.path.abspath(CARPETA_VIDEOS_RAIZ)]) == os.path.abspath(CARPETA_VIDEOS_RAIZ):
-            if os.path.exists(ruta_fisica_abs):
-                try:
-                    if tipo == 'video': os.remove(ruta_fisica_abs) 
-                    elif tipo == 'carpeta': shutil.rmtree(ruta_fisica_abs) 
-                except Exception as e: print(f"Error al borrar: {e}")
-                exp = cargar_expiraciones()
-                if item_ruta in exp:
-                    del exp[item_ruta]
-                    guardar_expiraciones(exp)
-                    
-    return redirect(url_for('editor_visual', carpeta=carpeta_actual))
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+                    nueva_ruta_relativa = os.path.join(carpeta_limpia,
