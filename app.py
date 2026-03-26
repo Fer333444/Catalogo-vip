@@ -472,17 +472,24 @@ def editor_visual():
 def crear_carpeta():
     carpeta_padre_actual = request.form.get('carpeta_actual', '')
     nueva_carpeta_nombre = request.form.get('nombre_carpeta')
-    tiempo_limite = request.form.get('tiempo_limite', '0')
+    horas = int(request.form.get('horas', 0))
+    minutos = int(request.form.get('minutos', 0))
+    
     if nueva_carpeta_nombre:
         nombre_seguro = secure_filename(nueva_carpeta_nombre)
         ruta_relativa = os.path.join(carpeta_padre_actual, nombre_seguro).replace('\\', '/')
         ruta_fisica_final = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_padre_actual, nombre_seguro)
+        
         if not os.path.exists(ruta_fisica_final):
             os.makedirs(ruta_fisica_final)
-            if tiempo_limite != '0':
+            
+            # Convertimos horas y minutos a segundos
+            tiempo_segundos = (horas * 3600) + (minutos * 60)
+            if tiempo_segundos > 0:
                 exp = cargar_expiraciones()
-                exp[ruta_relativa] = {"tipo": "carpeta", "limite": tiempo_limite, "creacion": time.time()}
+                exp[ruta_relativa] = {"tipo": "carpeta", "limite": str(tiempo_segundos), "creacion": time.time()}
                 guardar_expiraciones(exp)
+                
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
 @app.route('/admin/renombrar-carpeta', methods=['POST'])
 @login_requerido
@@ -564,14 +571,16 @@ def subir_video():
         
     archivos = request.files.getlist('video_file')
     carpeta_actual = request.form.get('carpeta_actual', '').strip('/')
-    tiempo_limite = request.form.get('tiempo_limite', '0')
+    
+    # Leemos las horas y minutos desde el formulario de subida
+    horas = int(request.form.get('horas', 0))
+    minutos = int(request.form.get('minutos', 0))
 
     if not archivos or (len(archivos) == 1 and archivos[0].filename == ''):
         return redirect(f'/editor-visual?carpeta={carpeta_actual}')
 
-    tiempo_segundos = 0
-    if tiempo_limite.endswith('m'): tiempo_segundos = int(tiempo_limite[:-1]) * 60
-    elif tiempo_limite.endswith('h'): tiempo_segundos = int(tiempo_limite[:-1]) * 3600
+    # Calculamos el tiempo de expiración
+    tiempo_segundos = (horas * 3600) + (minutos * 60)
     timestamp_exp = int(time.time()) + tiempo_segundos if tiempo_segundos > 0 else 0
 
     expiraciones = cargar_expiraciones()
@@ -581,25 +590,21 @@ def subir_video():
     if not os.path.exists(ruta_destino): 
         os.makedirs(ruta_destino)
 
-    # Contamos cuántos videos hay para asignar el número correcto
     archivos_existentes = [f for f in os.listdir(ruta_destino) if f.lower().endswith(EXT_MEDIA)]
     contador = len(archivos_existentes) + 1
 
     for archivo in archivos:
         if archivo and archivo.filename.lower().endswith(EXT_MEDIA):
             extension = archivo.filename.rsplit('.', 1)[1].lower()
-            
-            # MAGIA: Forzamos nombre limpio SIN espacios para que el reproductor no falle
             nombre_limpio = f"video_{contador}.{extension}"
             
-            # Evitamos duplicados al 100%
             while os.path.exists(os.path.join(ruta_destino, nombre_limpio)):
                 contador += 1
                 nombre_limpio = f"video_{contador}.{extension}"
             
-            # Guardamos en la caja fuerte
             archivo.save(os.path.join(ruta_destino, nombre_limpio))
 
+            # Si el tiempo es mayor a 0, lo registramos para que expire
             if timestamp_exp > 0:
                 ruta_relativa = os.path.join(carpeta_actual, nombre_limpio).replace('\\', '/')
                 expiraciones[ruta_relativa] = {
