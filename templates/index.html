@@ -17,31 +17,30 @@
         .ruta-actual a:hover { color: #f5c518; }
         .ruta-actual b { color: #f5c518; }
 
-        /* SISTEMA DE GRID RESPONSIVO */
+        /* SISTEMA DE GRID RESPONSIVO ALINEADO PERFECTO */
         .grid-contenido { display: grid; gap: 15px; }
         @media (min-width: 992px) { .grid-contenido { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
         @media (min-width: 600px) and (max-width: 991px) { .grid-contenido { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
         @media (max-width: 599px) { .grid-contenido { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
 
-        /* Diseño de Tarjetas */
+        /* Diseño de Tarjetas UNIFICADO para Carpetas y Videos */
         .tarjeta-item { background: #111; border-radius: 12px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; position: relative; text-decoration: none; transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; overflow: hidden; height: 100%; box-sizing: border-box; }
         .tarjeta-item:hover { transform: translateY(-4px); border-color: #f5c518; box-shadow: 0 6px 15px rgba(245, 197, 24, 0.15); }
 
-        /* Tarjeta de Carpeta */
-        .tarjeta-carpeta { align-items: center; justify-content: center; padding: 25px 15px; aspect-ratio: 16/10; }
-        .icono-carpeta { font-size: 4.2em; color: #f5c518; margin-bottom: 15px; }
-        .titulo-carpeta { color: #f5c518; font-weight: bold; text-transform: uppercase; text-align: center; font-size: 1.05em; word-break: break-all; margin: 0; }
-        @media (max-width: 599px) { .tarjeta-carpeta { padding: 15px 10px; } .icono-carpeta { font-size: 3.5em; margin-bottom: 10px; } .titulo-carpeta { font-size: 0.9em; } }
-
-        /* Tarjeta de Video */
-        .tarjeta-video { height: 100%; }
         .portada-wrapper { width: 100%; position: relative; overflow: hidden; border-radius: 11px 11px 0 0; background-color: #000; aspect-ratio: 16/9; }
         .portada-video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .titulo-video { color: #fff; font-size: 0.9em; text-align: center; padding: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #111; font-weight: bold; }
-        @media (max-width: 599px) { .portada-wrapper { aspect-ratio: 9/16; } .titulo-video { font-size: 0.8em; padding: 10px; } }
+        
+        @media (max-width: 599px) { 
+            .portada-wrapper { aspect-ratio: 9/16; } 
+            .titulo-video { font-size: 0.8em; padding: 10px; } 
+        }
 
-        /* --- ESTILOS DEL TEMPORIZADOR ROJO --- */
-        .badge-tiempo { position: absolute; top: 8px; right: 8px; background: #ff3333; color: white; padding: 6px 12px; border-radius: 25px; font-size: 0.85em; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.8); z-index: 20; border: 2px solid #0a0a0a; display: flex; align-items: center; gap: 7px; letter-spacing: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+        /* --- ESTILOS DEL TEMPORIZADOR Y ETIQUETAS --- */
+        .badge-tiempo, .badge-carpeta { position: absolute; top: 8px; right: 8px; padding: 6px 12px; border-radius: 25px; font-size: 0.85em; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.8); z-index: 20; border: 2px solid #0a0a0a; display: flex; align-items: center; gap: 7px; letter-spacing: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+        .badge-tiempo { background: #ff3333; color: white;}
+        .badge-carpeta { background: rgba(0,0,0,0.7); border-color: #f5c518; color: #f5c518; }
+        
         .reloj-analogo { width: 16px; height: 16px; border: 2px solid white; border-radius: 50%; position: relative; display: inline-block; background-color: rgba(255, 255, 255, 0.15); overflow: hidden; }
         .reloj-analogo .aguja { width: 2px; height: 7px; background: white; position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg); border-radius: 2px; z-index: 10; }
         .reloj-analogo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(white var(--grados, 0deg), transparent var(--grados, 0deg)); z-index: 1; }
@@ -61,13 +60,41 @@
         </div>
         <div class="container">
             {% if carpeta_actual != '' %}<div class="ruta-actual"><a href="/">Inicio</a> / <b>{{ carpeta_actual }}</b></div>{% endif %}
+            
             <div class="grid-contenido">
+                
+                <!-- CARPETAS REDISEÑADAS Y ALINEADAS -->
                 {% for carpeta in carpetas %}
-                    <a href="/?carpeta={{ carpeta.ruta_relativa }}" class="tarjeta-item tarjeta-carpeta">
-                        <div class="icono-carpeta">📁</div>
-                        <h3 class="titulo-carpeta">{{ carpeta.nombre }}</h3>
-                    </a>
+                    <div class="tarjeta-item tarjeta-video">
+                        <a href="/?carpeta={{ carpeta.ruta_relativa }}" style="display:block; text-decoration:none; height: 100%;">
+                            <div class="portada-wrapper" style="background-color: #1a1a1a; display: flex; justify-content: center; align-items: center; position: relative;">
+                                
+                                <!-- Icono central sutil -->
+                                <div style="font-size: 5em; opacity: 0.2;">📁</div>
+                                
+                                <!-- Etiqueta superior derecha indicando CARPETA -->
+                                <div class="badge-carpeta">📁 CARPETA</div>
+
+                                <!-- COLLAGE PEQUEÑO ABAJO A LA IZQUIERDA -->
+                                {% if carpeta.miniaturas_collage %}
+                                <div style="position: absolute; bottom: 10px; left: 10px; width: 60px; height: 40px; background: #000; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); gap: 1px; border-radius: 4px; overflow: hidden; border: 1px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.8);">
+                                    {% for miniatura in carpeta.miniaturas_collage %}
+                                        <img src="/media/{{ miniatura }}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                                    {% endfor %}
+                                    <!-- Rellenar huecos grises si la carpeta tiene menos de 4 archivos -->
+                                    {% if carpeta.miniaturas_collage|length == 1 %} <div style="background:#222;"></div><div style="background:#222;"></div><div style="background:#222;"></div> {% endif %}
+                                    {% if carpeta.miniaturas_collage|length == 2 %} <div style="background:#222;"></div><div style="background:#222;"></div> {% endif %}
+                                    {% if carpeta.miniaturas_collage|length == 3 %} <div style="background:#222;"></div> {% endif %}
+                                </div>
+                                {% endif %}
+
+                            </div>
+                            <h3 class="titulo-video">{{ carpeta.nombre.replace('_', ' ') }}</h3>
+                        </a>
+                    </div>
                 {% endfor %}
+
+                <!-- VIDEOS NORMALES -->
                 {% for video in videos %}
                 <div class="tarjeta-item tarjeta-video">
                     {% if video.timestamp_exp > 0 %}
@@ -81,8 +108,7 @@
                             {% if video.tipo == 'foto' %}
                                 <img class="portada-video" src="/media/{{ video.ruta_completa_descarga }}" alt="Portada foto">
                             {% else %}
-                                
-<video class="portada-video" autoplay loop muted playsinline preload="auto" style="pointer-events: none;">
+                                <video class="portada-video" autoplay loop muted playsinline preload="auto" style="pointer-events: none;">
                                     <source src="/media/{{ video.ruta_completa_descarga }}">
                                 </video>
                             {% endif %}
@@ -91,7 +117,9 @@
                     </a>
                 </div>
                 {% endfor %}
+
             </div>
+            
             {% if not carpetas and not videos %}<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #888; padding: 40px; text-align: center; font-size: 1.1em; background: #111; border-radius: 12px; border: 1px solid #222;">No hay contenido disponible.</div>{% endif %}
         </div>
     </div>
@@ -103,7 +131,7 @@
                 const total = parseInt(badge.getAttribute('data-total'));
                 const restante = expira - ahora;
                 if (restante <= 0) {
-                    const tarjeta = badge.closest('.tarjeta-carpeta, .tarjeta-video');
+                    const tarjeta = badge.closest('.tarjeta-video');
                     if(tarjeta) { tarjeta.style.transform = "scale(0)"; tarjeta.style.opacity = "0"; setTimeout(() => tarjeta.remove(), 400); }
                 } else {
                     let h = Math.floor(restante / 3600), m = Math.floor((restante % 3600) / 60), s = restante % 60;

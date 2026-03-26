@@ -278,9 +278,23 @@ def escanear_contenido_carpeta(ruta_relativa=''):
         ruta_relativa_elemento = os.path.join(ruta_relativa, elemento).replace('\\', '/')
 
         if os.path.isdir(ruta_elemento):
+            # --- NUEVA LÓGICA DE COLLAGE PARA CARPETAS ---
+            previsualizaciones = []
+            try:
+                contenido_interior = os.listdir(ruta_elemento)
+                for item_interior in sorted(contenido_interior):
+                    if item_interior.lower().endswith(EXT_MEDIA):
+                        ruta_relativa_interior = os.path.join(ruta_relativa_elemento, item_interior).replace('\\', '/')
+                        previsualizaciones.append(ruta_relativa_interior)
+                        if len(previsualizaciones) == 4:
+                            break
+            except:
+                pass
+
             carpetas.append({
                 'nombre': elemento,
-                'ruta_relativa': ruta_relativa_elemento
+                'ruta_relativa': ruta_relativa_elemento,
+                'miniaturas_collage': previsualizaciones
             })
         elif os.path.isfile(ruta_elemento) and elemento.lower().endswith(EXT_MEDIA):
             exp_data = expiraciones.get(ruta_relativa_elemento, {})
