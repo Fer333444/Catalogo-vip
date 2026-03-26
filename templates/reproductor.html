@@ -37,9 +37,21 @@
             {% if video.tipo == 'foto' %}
                 <img src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}" class="media-elemento">
             {% else %}
-                <video controls playsinline autoplay class="media-elemento">
+                <!-- AQUÍ ESTÁ LA MAGIA: Se agregó id, muted y preload="auto" -->
+                <video id="reproductorVip" controls playsinline autoplay muted preload="auto" class="media-elemento">
                     <source src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}">
                 </video>
+                <!-- Este script fuerza el inicio en los iPhones necios -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var videoElement = document.getElementById('reproductorVip');
+                        if(videoElement) {
+                            videoElement.play().catch(function(error) {
+                                console.log("Esperando interacción del usuario para reproducir", error);
+                            });
+                        }
+                    });
+                </script>
             {% endif %}
         </div>
 
