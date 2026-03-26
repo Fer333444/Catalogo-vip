@@ -156,6 +156,27 @@ def verificar(token):
 def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
+@app.route('/perfil')
+@login_requerido
+def perfil():
+    # Abre la página del perfil. (El correo ya se envía automáticamente por la session)
+    return render_template('perfil.html')
+
+@app.route('/eliminar-mi-cuenta', methods=['POST'])
+@login_requerido
+def eliminar_mi_cuenta():
+    correo = session.get('usuario')
+    usuarios = cargar_usuarios()
+    
+    # Si el usuario existe en la base de datos, lo borramos
+    if correo and correo in usuarios:
+        del usuarios[correo]
+        guardar_usuarios(usuarios)
+        
+    # Cerramos su sesión forzosamente
+    session.pop('usuario', None)
+    flash("Tu cuenta ha sido eliminada. Lamentamos verte ir.", "exito")
+    return redirect(url_for('login'))
 
 def cargar_expiraciones():
     if os.path.exists(ARCHIVO_EXPIRACIONES):

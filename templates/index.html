@@ -36,7 +36,21 @@
 </head>
 <body>
 
-    <h1 class="header-titulo">CATÁLOGO VIP</h1>
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #333; margin-bottom: 30px; background-color: #111; width: 100%; box-sizing: border-box; border-radius: 8px;">
+        
+        <!-- Espacio vacío a la izquierda para que el título quede centrado -->
+        <div style="width: 120px;"></div> 
+        
+        <!-- Título Central -->
+        <h1 style="color: #f5c518; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center;">Catálogo VIP</h1>
+        
+        <!-- Botón de Perfil a la derecha -->
+        <a href="/perfil" style="background-color: #222; color: #f5c518; border: 1px solid #f5c518; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; transition: 0.3s; width: 120px; text-align: center; box-sizing: border-box;" onmouseover="this.style.backgroundColor='#f5c518'; this.style.color='#000'" onmouseout="this.style.backgroundColor='#222'; this.style.color='#f5c518'">
+            👤 Perfil
+        </a>
+
+    </div>
     
     {% if carpeta_actual != '' %}
         <div class="ruta-actual"><a href="/" style="color:#888; text-decoration:none;">Inicio</a> / <b>{{ carpeta_actual }}</b></div>

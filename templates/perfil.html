@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px;}
+        .perfil-box { background: #111; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 1px solid #333; width: 100%; max-width: 450px; text-align: center;}
+        h2 { color: #f5c518; margin-top: 0; text-transform: uppercase; letter-spacing: 2px;}
+        
+        /* Caja donde sale el correo */
+        .correo-box { background: #222; border: 1px solid #444; padding: 15px; border-radius: 8px; font-size: 1.1em; margin-bottom: 30px; font-weight: bold; color: #ccc;}
+        
+        /* Botones */
+        .btn { width: 100%; padding: 15px; margin-bottom: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; box-sizing: border-box;}
+        
+        .btn-volver { background-color: #333; color: #fff; }
+        .btn-volver:hover { background-color: #444; }
+        
+        .btn-logout { background-color: #f5c518; color: #000; }
+        .btn-logout:hover { background-color: #e0b416; }
+        
+        .btn-eliminar { background-color: transparent; border: 2px solid #ff4444; color: #ff4444; margin-top: 15px;}
+        .btn-eliminar:hover { background-color: #ff4444; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="perfil-box">
+        <h2>👤 Mi Perfil</h2>
+        <p style="color:#888; margin-bottom: 20px;">Estás conectado con la cuenta:</p>
+        
+        <!-- Aquí usamos Jinja2 para jalar el correo con el que iniciaron sesión -->
+        <div class="correo-box">{{ session.usuario }}</div>
+
+        <a href="/" class="btn btn-volver">⬅️ Volver al Catálogo</a>
+        
+        <a href="/logout" class="btn btn-logout">🚪 Cerrar Sesión</a>
+        
+        <!-- Botón de eliminar con advertencia -->
+        <form method="POST" action="/eliminar-mi-cuenta" onsubmit="return confirm('⚠️ ¿Estás completamente seguro de que quieres borrar tu cuenta? Perderás acceso a todo el contenido VIP inmediatamente y esta acción no se puede deshacer.');">
+            <button type="submit" class="btn btn-eliminar">🗑️ Borrar mi cuenta definitivamente</button>
+        </form>
+    </div>
+
+</body>
+</html>
