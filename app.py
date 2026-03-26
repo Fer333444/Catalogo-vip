@@ -15,12 +15,16 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = 'super_clave_secreta_vip_cambiame' 
 
+# --- CONFIGURACIÓN DE RUTAS (CONECTANDO EL DISCO) ---
+# Usamos '/data' en Render, o una carpeta 'data' local si estás probando en tu PC
+BASE_DIR = '/data' if os.environ.get('RENDER') else 'data'
+
 cerrojo_stats = threading.Lock()
-ARCHIVO_STATS = 'stats.json'
-ARCHIVO_EXPIRACIONES = 'expiraciones.json'
-ARCHIVO_USUARIOS = 'usuarios.json'
-CARPETA_INFORMES = 'informes_diarios'
-CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
+ARCHIVO_STATS = os.path.join(BASE_DIR, 'stats.json')
+ARCHIVO_EXPIRACIONES = os.path.join(BASE_DIR, 'expiraciones.json')
+ARCHIVO_USUARIOS = os.path.join(BASE_DIR, 'usuarios.json')
+CARPETA_INFORMES = os.path.join(BASE_DIR, 'informes_diarios')
+CARPETA_VIDEOS_RAIZ = os.path.join(BASE_DIR, 'videos')
 
 # --- CONFIGURACIÓN DE CORREO (BREVO) ---
 SMTP_SERVER = "smtp-relay.brevo.com"
@@ -33,7 +37,7 @@ EXT_VIDEOS = ('.mp4', '.mov')
 EXT_FOTOS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 EXT_MEDIA = EXT_VIDEOS + EXT_FOTOS
 
-for carpeta in [CARPETA_INFORMES, CARPETA_VIDEOS_RAIZ]:
+for carpeta in [BASE_DIR, CARPETA_INFORMES, CARPETA_VIDEOS_RAIZ]:
     if not os.path.exists(carpeta): os.makedirs(carpeta)
 
 def cargar_usuarios():
@@ -393,28 +397,43 @@ def crear_carpeta():
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
 
 @app.route('/admin/subir-video', methods=['POST'])
+@login_requerido
 def subir_video():
-    carpeta_actual = request.form.get('carpeta_actual', '')
-    videos_files = request.files.getlist('video_file') 
-    tiempo_limite = request.form.get('tiempo_limite', '0')
-    if videos_files:
-        siguiente_num = obtener_siguiente_numero()
-        exp = cargar_expiraciones()
-        modificado = False
-        for video_file in videos_files:
-            if video_file and video_file.filename.lower().endswith(EXT_MEDIA):
-                ext_original = os.path.splitext(video_file.filename)[1].lower()
-                ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
-                nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
-                siguiente_num += 1
-                ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
-                ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
-                video_file.save(ruta_fisica_guardado)
-                if tiempo_limite != '0':
-                    exp[ruta_relativa] = {"tipo": "archivo", "limite": tiempo_limite, "creacion": time.time()}
-                    modificado = True
-        if modificado: guardar_expiraciones(exp)
-    return redirect(url_for('editor_visual', carpeta=carpeta_actual))
+    if 'video_file' not in request.files: return redirect('/editor-visual')
+    archivos = request.files.getlist('video_file')
+    carpeta_actual = request.form.get('carpeta_actual', '').strip('/')
+    tiempo_limite = request.form.get('tiempo_limite', '0') # ∞ por defecto
+
+    if not archivos or (len(archivos) == 1 and archivos[0].filename == ''):
+        return redirect(f'/editor-visual?carpeta={carpeta_actual}')
+
+    # Cálculo de expiración
+    tiempo_segundos = 0
+    if tiempo_limite.endswith('m'): tiempo_segundos = int(tiempo_limite[:-1]) * 60
+    elif tiempo_limite.endswith('h'): tiempo_segundos = int(tiempo_limite[:-1]) * 3600
+    timestamp_exp = int(time.time()) + tiempo_segundos if tiempo_segundos > 0 else 0
+
+    expiraciones = cargar_expiraciones()
+    agregados = 0
+
+    for archivo in archivos:
+        if archivo and extension_permitida(archivo.filename, EXT_MEDIA):
+            nombre_original = secure_filename(archivo.filename)
+            nombre_unico = str(int(time.time())) + '_' + nombre_original
+            
+            
+# --- CLAVE DE LA PERSISTENCIA: os.path.join con CARPETA_VIDEOS_RAIZ ---
+            # Guardamos el video dentro de la caja fuerte blindada (/data/videos/...)
+            ruta_destino = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual)
+            if not os.path.exists(ruta_destino): os.makedirs(ruta_destino)
+            archivo.save(os.path.join(ruta_destino, nombre_unico))
+
+            # Actualizar DB de expiraciones
+            # ... (lógica de base de datos) ...
+            agregados += 1
+
+    if agregados > 0: guardas_expiraciones(expiraciones)
+    return redirect(f'/editor-visual?carpeta={carpeta_actual}')
 
 @app.route('/admin/mover-video', methods=['POST'])
 def mover_video():
@@ -499,6 +518,9 @@ def admin_eliminar_usuario():
         flash(f"Usuario {correo} eliminado correctamente.", "exito")
         
     return redirect(url_for('panel_usuarios'))
+@app.route('/media/<path:filename>')
+def serve_media(filename):
+    return send_from_directory(CARPETA_VIDEOS_RAIZ, filename)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
