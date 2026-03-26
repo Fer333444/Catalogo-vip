@@ -484,6 +484,77 @@ def crear_carpeta():
                 exp[ruta_relativa] = {"tipo": "carpeta", "limite": tiempo_limite, "creacion": time.time()}
                 guardar_expiraciones(exp)
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
+@app.route('/admin/renombrar-carpeta', methods=['POST'])
+@login_requerido
+def renombrar_carpeta():
+    carpeta_actual = request.form.get('carpeta_actual', '')
+    nombre_viejo = request.form.get('nombre_viejo')
+    nombre_nuevo = request.form.get('nombre_nuevo')
+
+    if nombre_viejo and nombre_nuevo:
+        nombre_seguro = secure_filename(nombre_nuevo)
+        ruta_base = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual)
+        ruta_vieja_fisica = os.path.join(ruta_base, nombre_viejo)
+        ruta_nueva_fisica = os.path.join(ruta_base, nombre_seguro)
+
+        if os.path.exists(ruta_vieja_fisica) and not os.path.exists(ruta_nueva_fisica):
+            # 1. Renombramos la carpeta en el disco
+            os.rename(ruta_vieja_fisica, ruta_nueva_fisica)
+            
+            # 2. Actualizamos el archivo de expiraciones para que no pierdan su contador
+            exp = cargar_expiraciones()
+            exp_modificado = False
+            rutas_viejas_relativas = os.path.join(carpeta_actual, nombre_viejo).replace('\\', '/')
+            rutas_nuevas_relativas = os.path.join(carpeta_actual, nombre_seguro).replace('\\', '/')
+
+            nuevas_expiraciones = {}
+            for ruta_key, info in exp.items():
+                if ruta_key.startswith(rutas_viejas_relativas):
+                    nueva_ruta_key = ruta_key.replace(rutas_viejas_relativas, rutas_nuevas_relativas, 1)
+                    nuevas_expiraciones[nueva_ruta_key] = info
+                    exp_modificado = True
+                else:
+                    nuevas_expiraciones[ruta_key] = info
+            
+            if exp_modificado:
+                guardar_expiraciones(nuevas_expiraciones)
+                
+            flash(f"Carpeta renombrada a '{nombre_seguro}' exitosamente.", "exito")
+        else:
+            flash("Error: La carpeta no existe o el nuevo nombre ya está en uso.", "error")
+
+    return redirect(url_for('editor_visual', carpeta=carpeta_actual))
+
+@app.route('/admin/editar-tiempo', methods=['POST'])
+@login_requerido
+def editar_tiempo():
+    ruta_archivo = request.form.get('ruta_archivo')
+    carpeta_actual = request.form.get('carpeta_actual', '')
+    horas = int(request.form.get('horas', 0))
+    minutos = int(request.form.get('minutos', 0))
+
+    if ruta_archivo:
+        # Convertimos todo a segundos
+        tiempo_segundos = (horas * 3600) + (minutos * 60)
+        
+        exp = cargar_expiraciones()
+        
+        if tiempo_segundos > 0:
+            timestamp_exp = int(time.time()) + tiempo_segundos
+            exp[ruta_archivo] = {
+                'expira_en': timestamp_exp,
+                'total_segundos': tiempo_segundos
+            }
+            flash(f"Tiempo actualizado a {horas}h {minutos}m.", "exito")
+        else:
+            # Si le ponen 0, significa que no expira nunca, así que lo borramos del registro
+            if ruta_archivo in exp:
+                del exp[ruta_archivo]
+            flash("Temporizador eliminado. El archivo ya no expirará.", "exito")
+            
+        guardar_expiraciones(exp)
+
+    return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
 @app.route('/admin/subir-video', methods=['POST'])
 @login_requerido
