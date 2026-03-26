@@ -399,7 +399,9 @@ def crear_carpeta():
 @app.route('/admin/subir-video', methods=['POST'])
 @login_requerido
 def subir_video():
-    if 'video_file' not in request.files: return redirect('/editor-visual')
+    if 'video_file' not in request.files: 
+        return redirect('/editor-visual')
+        
     archivos = request.files.getlist('video_file')
     carpeta_actual = request.form.get('carpeta_actual', '').strip('/')
     tiempo_limite = request.form.get('tiempo_limite', '0') # ∞ por defecto
@@ -417,22 +419,28 @@ def subir_video():
     agregados = 0
 
     for archivo in archivos:
-        if archivo and extension_permitida(archivo.filename, EXT_MEDIA):
+        # CORRECCIÓN: Verificamos la extensión de forma directa y segura
+        if archivo and archivo.filename.lower().endswith(EXT_MEDIA):
             nombre_original = secure_filename(archivo.filename)
             nombre_unico = str(int(time.time())) + '_' + nombre_original
             
-            
-# --- CLAVE DE LA PERSISTENCIA: os.path.join con CARPETA_VIDEOS_RAIZ ---
             # Guardamos el video dentro de la caja fuerte blindada (/data/videos/...)
             ruta_destino = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual)
             if not os.path.exists(ruta_destino): os.makedirs(ruta_destino)
             archivo.save(os.path.join(ruta_destino, nombre_unico))
 
-            # Actualizar DB de expiraciones
-            # ... (lógica de base de datos) ...
+            # Guardamos la fecha de expiración si el usuario seleccionó un tiempo
+            if timestamp_exp > 0:
+                ruta_relativa = os.path.join(carpeta_actual, nombre_unico).replace('\\', '/')
+                expiraciones[ruta_relativa] = {
+                    'expira_en': timestamp_exp,
+                    'total_segundos': tiempo_segundos
+                }
             agregados += 1
 
-    if agregados > 0: guardas_expiraciones(expiraciones)
+    if agregados > 0: 
+        guardar_expiraciones(expiraciones)
+        
     return redirect(f'/editor-visual?carpeta={carpeta_actual}')
 
 @app.route('/admin/mover-video', methods=['POST'])
