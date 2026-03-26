@@ -49,21 +49,25 @@ def guardar_usuarios(data):
 def enviar_correo_verificacion(destinatario, token, url_base):
     enlace = f"{url_base}verificar/{token}"
     
-    # Diseño limpio, blanco y minimalista (evita la carpeta de Promociones)
+    # Diseño limpio con un botón pequeño y discreto (Amigable con la Bandeja Principal)
     html_content = f"""
-    <div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; max-width: 600px; padding: 20px;">
         <p>Hola,</p>
-        <p>Gracias por registrarte en nuestro catálogo. Ya casi terminamos.</p>
-        <p>Para activar tu cuenta de forma segura y acceder al contenido, por favor confirma tu acceso haciendo clic en el siguiente enlace:</p>
-        <p style="margin: 25px 0;"><a href="{enlace}" style="color: #1a73e8; text-decoration: none; font-weight: bold; word-break: break-all;">{enlace}</a></p>
-        <p>Si el enlace no funciona al darle clic, cópialo y pégalo en la barra superior de tu navegador.</p>
+        <p>Gracias por registrarte en Publicidad Vip. Ya casi terminamos.</p>
+        <p>Para activar tu cuenta de forma segura, haz clic en el botón de abajo:</p>
+        
+        <p style="margin: 25px 0;">
+            <a href="{enlace}" style="background-color: #1a73e8; color: #ffffff; padding: 10px 20px; text-decoration: none; font-weight: bold; border-radius: 6px; font-size: 14px; display: inline-block;">Verificar mi cuenta</a>
+        </p>
+        
+        <p style="font-size: 12px; color: #777; margin-top: 30px;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br>{enlace}</p>
         <br>
-        <p>Saludos cordiales,<br>El Equipo de Soporte</p>
+        <p>Saludos cordiales,<br>El Equipo de Publicidad Vip</p>
     </div>
     """
     
     msg = MIMEText(html_content, 'html')
-    msg['Subject'] = 'Tu acceso al catálogo'  # Asunto más natural, menos comercial
+    msg['Subject'] = 'Tu acceso a Publicidad Vip'  # Asunto limpio y directo
     msg['From'] = CORREO_REMITENTE
     msg['To'] = destinatario
 
