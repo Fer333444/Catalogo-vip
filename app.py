@@ -1,27 +1,158 @@
-from flask import Flask, render_template, send_from_directory, request, redirect, url_for, make_response
+from flask import Flask, render_template, send_from_directory, request, redirect, url_for, make_response, session, flash
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+import smtplib
+from email.mime.text import MIMEText
 import json
 import os
 import shutil
 import threading
 import time
+import uuid
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = 'super_clave_secreta_vip_cambiame' # Mantiene las sesiones abiertas para siempre
 
 cerrojo_stats = threading.Lock()
 ARCHIVO_STATS = 'stats.json'
 ARCHIVO_EXPIRACIONES = 'expiraciones.json'
+ARCHIVO_USUARIOS = 'usuarios.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
-# EXTENSIONES PERMITIDAS
+# --- CONFIGURACIÓN DE CORREO Y ADMIN ---
+CORREO_REMITENTE = "fernandoburgos8001@gmail.com"  # PON TU GMAIL AQUÍ
+PASS_REMITENTE = "kbzxpytgkldfvykm" # (Te explico abajo cómo sacarla)
+ADMIN_EMAIL = "fernandoburgos8001@gmail.com" # PON TU GMAIL AQUÍ (Para que solo tú entres al editor)
+
 EXT_VIDEOS = ('.mp4', '.mov')
 EXT_FOTOS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 EXT_MEDIA = EXT_VIDEOS + EXT_FOTOS
 
 for carpeta in [CARPETA_INFORMES, CARPETA_VIDEOS_RAIZ]:
     if not os.path.exists(carpeta): os.makedirs(carpeta)
+
+# --- SISTEMA DE USUARIOS Y AUTENTICACIÓN ---
+def cargar_usuarios():
+    if os.path.exists(ARCHIVO_USUARIOS):
+        with open(ARCHIVO_USUARIOS, 'r') as f:
+            try: return json.load(f)
+            except: return {}
+    return {}
+
+def guardar_usuarios(data):
+    with open(ARCHIVO_USUARIOS, 'w') as f: json.dump(data, f)
+
+def enviar_correo_verificacion(destinatario, token, url_base):
+    enlace = f"{url_base}verificar/{token}"
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; text-align: center; background-color: #0a0a0a; color: white; padding: 40px; border-radius: 10px;">
+        <h2 style="color: #f5c518;">¡Bienvenido al Catálogo VIP!</h2>
+        <p style="font-size: 16px;">Para activar tu cuenta y acceder al contenido exclusivo, haz clic en el siguiente botón:</p>
+        <br>
+        <a href="{enlace}" style="background-color: #f5c518; color: black; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 8px; font-size: 18px; display: inline-block;">VERIFICAR MI CUENTA</a>
+        <br><br>
+        <p style="color: #888; font-size: 12px;">Si no te registraste en nuestra plataforma, ignora este correo.</p>
+    </div>
+    """
+    msg = MIMEText(html_content, 'html')
+    msg['Subject'] = 'Verifica tu acceso VIP'
+    msg['From'] = CORREO_REMITENTE
+    msg['To'] = destinatario
+
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(CORREO_REMITENTE, PASS_REMITENTE)
+        server.sendmail(CORREO_REMITENTE, [destinatario], msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Error enviando correo: {e}")
+        return False
+
+# Escudo para proteger el catálogo (Solo usuarios registrados entran)
+def login_requerido(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Escudo para el Editor (Solo TU correo entra)
+def admin_requerido(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'usuario' not in session or session['usuario'] != ADMIN_EMAIL:
+            return "Acceso Denegado. Solo el administrador puede entrar aquí.", 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- RUTAS DE LOGIN Y REGISTRO ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'usuario' in session: return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        accion = request.form.get('accion')
+        correo = request.form.get('correo').lower().strip()
+        password = request.form.get('password')
+        usuarios = cargar_usuarios()
+
+        if accion == 'registro':
+            if correo in usuarios:
+                flash("Este correo ya está registrado. Inicia sesión.", "error")
+            else:
+                token = str(uuid.uuid4())
+                usuarios[correo] = {
+                    "password": generate_password_hash(password),
+                    "verificado": False,
+                    "token": token
+                }
+                guardar_usuarios(usuarios)
+                # Obtenemos la URL de tu render automáticamente
+                url_base = request.host_url 
+                enviado = enviar_correo_verificacion(correo, token, url_base)
+                if enviado:
+                    flash("¡Registro exitoso! Revisa tu correo (y la carpeta SPAM) y dale al botón para entrar.", "exito")
+                else:
+                    flash("Error al enviar el correo. Intenta de nuevo.", "error")
+                    
+        elif accion == 'login':
+            user = usuarios.get(correo)
+            if user and check_password_hash(user['password'], password):
+                if not user['verificado']:
+                    flash("Debes revisar tu correo y verificar tu cuenta primero.", "error")
+                else:
+                    session['usuario'] = correo
+                    session.permanent = True # La sesión no se borra al cerrar el navegador
+                    return redirect(url_for('index'))
+            else:
+                flash("Correo o contraseña incorrectos.", "error")
+
+    return render_template('login.html')
+
+@app.route('/verificar/<token>')
+def verificar(token):
+    usuarios = cargar_usuarios()
+    for correo, datos in usuarios.items():
+        if datos.get('token') == token:
+            usuarios[correo]['verificado'] = True
+            usuarios[correo]['token'] = None 
+            guardar_usuarios(usuarios)
+            session['usuario'] = correo # Los logueamos directamente
+            session.permanent = True
+            return redirect(url_for('index'))
+    return "Enlace inválido o expirado."
+
+@app.route('/logout')
+def logout():
+    session.pop('usuario', None)
+    return redirect(url_for('login'))
+
 
 # --- SISTEMA DE AUTODESTRUCCIÓN ---
 def cargar_expiraciones():
@@ -39,72 +170,46 @@ def limpiar_expirados():
     ahora = time.time()
     modificado = False
     rutas_a_borrar = []
-
     for ruta, info in exp.items():
         limite_val = str(info.get('limite', '0'))
         segundos_limite = 0
         if limite_val.endswith('m'): segundos_limite = int(limite_val.replace('m', '')) * 60
         elif limite_val.endswith('h'): segundos_limite = int(limite_val.replace('h', '')) * 3600
         else: segundos_limite = int(limite_val) * 3600
-
         if segundos_limite > 0:
             fecha_creacion = info.get('creacion', 0)
-            if ahora > fecha_creacion + segundos_limite:
-                rutas_a_borrar.append(ruta)
-
+            if ahora > fecha_creacion + segundos_limite: rutas_a_borrar.append(ruta)
     for ruta in rutas_a_borrar:
         ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, ruta)
         if os.path.exists(ruta_fisica):
             try:
                 if os.path.isdir(ruta_fisica): shutil.rmtree(ruta_fisica) 
                 else: os.remove(ruta_fisica) 
-            except Exception as e: print(f"Error auto-borrando {ruta}: {e}")
+            except Exception as e: pass
         del exp[ruta]
         modificado = True
-
     if modificado: guardar_expiraciones(exp)
 
 @app.before_request
 def vigilante_de_tiempo():
     limpiar_expirados()
 
-# --- ESTADÍSTICAS Y VISITAS ---
+# --- ESTADÍSTICAS ---
 def obtener_fecha_hoy(): return datetime.now().strftime("%Y-%m-%d")
 
 def cargar_estadisticas():
     hoy = obtener_fecha_hoy()
     stats_default = {"fecha": hoy, "descargas": {}, "visitas": 0}
-    
     if os.path.exists(ARCHIVO_STATS):
         with open(ARCHIVO_STATS, 'r') as f:
             try: data = json.load(f)
             except: data = stats_default
-            
-            if data.get("fecha") != hoy and "fecha" in data:
-                generar_informe(data)
-                return stats_default
-                
+            if data.get("fecha") != hoy and "fecha" in data: return stats_default
             if "fecha" not in data: data["fecha"] = hoy
             if "descargas" not in data: data["descargas"] = {}
             if "visitas" not in data: data["visitas"] = 0
-            
             return data
     return stats_default
-
-def generar_informe(data_vieja):
-    fecha_ayer = data_vieja.get("fecha", "Desconocida")
-    descargas = data_vieja.get("descargas", {})
-    visitas = data_vieja.get("visitas", 0)
-    
-    ruta = os.path.join(CARPETA_INFORMES, f"informe_{fecha_ayer}.txt")
-    with open(ruta, 'w', encoding='utf-8') as f:
-        f.write(f"=== INFORME VIP ===\nFecha: {fecha_ayer}\n")
-        f.write(f"👁️ VISITAS TOTALES A LA WEB: {visitas}\n\n")
-        
-        total = sum(descargas.values())
-        f.write("--- DESCARGAS DE VIDEOS ---\n")
-        for video, cantidad in descargas.items(): f.write(f"- {video}: {cantidad} descargas\n")
-        f.write(f"\nTOTAL: {total} DESCARGAS\n")
 
 def guardar_estadisticas(data):
     with open(ARCHIVO_STATS, 'w') as f: json.dump(data, f)
@@ -129,16 +234,12 @@ def escanear_contenido_carpeta(subcarpeta_relativa=''):
     if not os.path.commonprefix([os.path.abspath(ruta_fisica), os.path.abspath(CARPETA_VIDEOS_RAIZ)]) == os.path.abspath(CARPETA_VIDEOS_RAIZ):
         ruta_fisica = CARPETA_VIDEOS_RAIZ
         subcarpeta_relativa = ''
-
     contenido = {"carpetas": [], "videos": []}
     if not os.path.exists(ruta_fisica): return contenido
-
     exp = cargar_expiraciones() 
-
     for item in os.listdir(ruta_fisica):
         ruta_completa_item = os.path.join(ruta_fisica, item)
         ruta_web_relativa = os.path.join(subcarpeta_relativa, item).replace('\\', '/')
-        
         info_exp = exp.get(ruta_web_relativa, {})
         limite_val = str(info_exp.get('limite', '0'))
         fecha_creacion = info_exp.get('creacion', 0)
@@ -146,7 +247,6 @@ def escanear_contenido_carpeta(subcarpeta_relativa=''):
         if limite_val.endswith('m'): segundos_limite = int(limite_val.replace('m', '')) * 60
         elif limite_val.endswith('h'): segundos_limite = int(limite_val.replace('h', '')) * 3600
         else: segundos_limite = int(limite_val) * 3600 if int(limite_val) > 0 else 0
-
         timestamp_exp = fecha_creacion + segundos_limite if segundos_limite > 0 else 0
 
         if os.path.isdir(ruta_completa_item):
@@ -177,8 +277,9 @@ def obtener_lista_carpetas_flat():
         if root != CARPETA_VIDEOS_RAIZ: carpetas.append(os.path.relpath(root, CARPETA_VIDEOS_RAIZ).replace('\\', '/'))
     return carpetas
 
-# --- RUTAS PÚBLICAS Y ADMIN STATS ---
+# --- RUTAS PÚBLICAS PROTEGIDAS (Solo los registrados ven esto) ---
 @app.route('/')
+@login_requerido
 def index():
     with cerrojo_stats:
         data = cargar_estadisticas()
@@ -190,6 +291,7 @@ def index():
     return render_template('index.html', carpetas=contenido["carpetas"], videos=contenido["videos"], carpeta_actual=carpeta_actual)
 
 @app.route('/ver/<path:ruta_video>')
+@login_requerido
 def ver_video(ruta_video):
     titulo_limpio = os.path.basename(ruta_video).rsplit('.', 1)[0].replace('_', ' ')
     tipo_media = 'foto' if ruta_video.lower().endswith(EXT_FOTOS) else 'video'
@@ -197,6 +299,7 @@ def ver_video(ruta_video):
     return render_template('reproductor.html', video=video_seleccionado)
 
 @app.route('/download/<path:filename>')
+@login_requerido
 def download_video(filename):
     nombre_limpio_archivo = os.path.basename(filename)
     ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, filename)
@@ -216,7 +319,9 @@ def download_video(filename):
     respuesta.headers["Expires"] = "0"
     return respuesta
 
+# --- RUTAS DE ADMIN PROTEGIDAS (Solo TU CORREO puede ver esto) ---
 @app.route('/admin-stats')
+@admin_requerido
 def panel_admin_stats():
     with cerrojo_stats: data = cargar_estadisticas()
     descargas = data["descargas"]
@@ -225,8 +330,6 @@ def panel_admin_stats():
     
     catalogo_flat = obtener_todo_el_catalogo_flat()
     datos_completos = []
-    
-    # Agregamos la ruta_relativa y tipo para que la web pueda cargar la miniatura
     for v in catalogo_flat:
         datos_completos.append({
             "titulo": v['titulo'], 
@@ -236,14 +339,11 @@ def panel_admin_stats():
             "ruta_relativa": v['ruta_relativa'],
             "tipo": v['tipo']
         })
-        
-    # ORDENAR LA LISTA: De más descargas a menos descargas automáticamente
     datos_completos.sort(key=lambda x: x['descargas'], reverse=True)
-        
     return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy, visitas=visitas_hoy)
 
-# --- RUTAS DEL EDITOR ---
 @app.route('/editor-visual')
+@admin_requerido
 def editor_visual():
     subcarpeta_a_ver = request.args.get('carpeta', default='')
     contenido = escanear_contenido_carpeta(subcarpeta_a_ver)
@@ -251,16 +351,15 @@ def editor_visual():
     return render_template('editor.html', carpetas=contenido["carpetas"], videos=contenido["videos"], carpeta_actual=subcarpeta_a_ver, todas_las_carpetas=todas_las_carpetas)
 
 @app.route('/admin/crear-carpeta', methods=['POST'])
+@admin_requerido
 def crear_carpeta():
     carpeta_padre_actual = request.form.get('carpeta_actual', '')
     nueva_carpeta_nombre = request.form.get('nombre_carpeta')
     tiempo_limite = request.form.get('tiempo_limite', '0')
-
     if nueva_carpeta_nombre:
         nombre_seguro = secure_filename(nueva_carpeta_nombre)
         ruta_relativa = os.path.join(carpeta_padre_actual, nombre_seguro).replace('\\', '/')
         ruta_fisica_final = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_padre_actual, nombre_seguro)
-        
         if not os.path.exists(ruta_fisica_final):
             os.makedirs(ruta_fisica_final)
             if tiempo_limite != '0':
@@ -270,52 +369,42 @@ def crear_carpeta():
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
 
 @app.route('/admin/subir-video', methods=['POST'])
+@admin_requerido
 def subir_video():
     carpeta_actual = request.form.get('carpeta_actual', '')
     videos_files = request.files.getlist('video_file') 
     tiempo_limite = request.form.get('tiempo_limite', '0')
-    
     if videos_files:
         siguiente_num = obtener_siguiente_numero()
         exp = cargar_expiraciones()
         modificado = False
-        
         for video_file in videos_files:
             if video_file and video_file.filename.lower().endswith(EXT_MEDIA):
                 ext_original = os.path.splitext(video_file.filename)[1].lower()
                 ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
-                
                 nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
                 siguiente_num += 1
-                
                 ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
                 ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
-                
                 video_file.save(ruta_fisica_guardado)
-
                 if tiempo_limite != '0':
                     exp[ruta_relativa] = {"tipo": "archivo", "limite": tiempo_limite, "creacion": time.time()}
                     modificado = True
-                    
         if modificado: guardar_expiraciones(exp)
-        
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
 @app.route('/admin/mover-video', methods=['POST'])
+@admin_requerido
 def mover_video():
     ruta_video_origen_web = request.form.get('video_origen') 
     carpeta_destino_web = request.form.get('carpeta_destino')
     carpeta_vista_actual = request.form.get('carpeta_actual', '')
-    
     if ruta_video_origen_web and carpeta_destino_web:
         ruta_fisica_abs_origen = os.path.join(CARPETA_VIDEOS_RAIZ, ruta_video_origen_web)
         nombre_archivo = os.path.basename(ruta_video_origen_web)
-        
         if carpeta_destino_web == "Raiz": ruta_fisica_abs_destino_carpeta = CARPETA_VIDEOS_RAIZ
         else: ruta_fisica_abs_destino_carpeta = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_destino_web)
-            
         ruta_fisica_final_archivo = os.path.join(ruta_fisica_abs_destino_carpeta, nombre_archivo)
-        
         if os.path.exists(ruta_fisica_abs_origen):
             if not os.path.exists(ruta_fisica_abs_destino_carpeta): os.makedirs(ruta_fisica_abs_destino_carpeta)
             if ruta_fisica_abs_origen != ruta_fisica_final_archivo:
@@ -326,15 +415,14 @@ def mover_video():
                     nueva_ruta_relativa = os.path.join(carpeta_limpia, nombre_archivo).replace('\\', '/')
                     exp[nueva_ruta_relativa] = exp.pop(ruta_video_origen_web)
                     guardar_expiraciones(exp)
-                
     return redirect(url_for('editor_visual', carpeta=carpeta_vista_actual))
 
 @app.route('/admin/eliminar', methods=['POST'])
+@admin_requerido
 def eliminar_item():
     item_ruta = request.form.get('item_ruta') 
     tipo = request.form.get('tipo') 
     carpeta_actual = request.form.get('carpeta_actual', '')
-
     if item_ruta and tipo:
         ruta_fisica_abs = os.path.join(CARPETA_VIDEOS_RAIZ, item_ruta)
         if os.path.commonprefix([os.path.abspath(ruta_fisica_abs), os.path.abspath(CARPETA_VIDEOS_RAIZ)]) == os.path.abspath(CARPETA_VIDEOS_RAIZ):
@@ -342,12 +430,11 @@ def eliminar_item():
                 try:
                     if tipo == 'video': os.remove(ruta_fisica_abs) 
                     elif tipo == 'carpeta': shutil.rmtree(ruta_fisica_abs) 
-                except Exception as e: print(f"Error al borrar: {e}")
+                except Exception as e: pass
                 exp = cargar_expiraciones()
                 if item_ruta in exp:
                     del exp[item_ruta]
                     guardar_expiraciones(exp)
-                    
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
 if __name__ == '__main__':

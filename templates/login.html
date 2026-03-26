@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px;}
+        .login-box { background: #111; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 1px solid #333; width: 100%; max-width: 400px; text-align: center;}
+        h2 { color: #f5c518; margin-top: 0; text-transform: uppercase; letter-spacing: 2px;}
+        
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; line-height: 1.4; }
+        .alert.error { background-color: #330000; border: 1px solid #ff4444; color: #ff8888; }
+        .alert.exito { background-color: #003311; border: 1px solid #00C851; color: #88ffaa; }
+
+        input { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; font-size: 1em;}
+        input:focus { outline: none; border-color: #f5c518; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s;}
+        
+        .btn-login { background-color: #f5c518; color: #000; margin-bottom: 15px;}
+        .btn-login:hover { background-color: #e0b416; }
+        
+        .btn-registro { background-color: transparent; border: 2px solid #555; color: #aaa;}
+        .btn-registro:hover { border-color: #f5c518; color: #f5c518;}
+        
+        .nota { color: #666; font-size: 0.85em; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Catálogo VIP</h2>
+    <p style="color:#888; margin-bottom: 30px;">Ingresa tus datos o crea una cuenta gratis para ver el contenido.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/login">
+        <input type="email" name="correo" placeholder="Correo Electrónico" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        
+        <button type="submit" name="accion" value="login" class="btn-login">🔒 Iniciar Sesión</button>
+        <button type="submit" name="accion" value="registro" class="btn-registro">Crear Cuenta Nueva</button>
+    </form>
+    
+    <div class="nota">Al registrarte, te enviaremos un correo para verificar que eres tú. Revisa la carpeta de Spam.</div>
+</div>
+
+</body>
+</html>
