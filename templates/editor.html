@@ -92,11 +92,19 @@
                 </div>
             </div>
         </form>
+        
         <div class="ruta-actual">
             <a href="/editor-visual">Principal (Raiz)</a>
-            {% if carpeta_actual %}{% set ruta_parcial = "" %}{% for parte in carpeta_actual.split('/') %}{% set ruta_parcial = (ruta_parcial + '/' + parte) if ruta_parcial else parte %} / <a href="/editor-visual?carpeta={{ ruta_parcial }}">{{ parte }}</a>{% endfor %}{% endif %}
-            / <b>{{ escanear_contenido_carpeta(carpeta_actual)['carpetas']|length + escanear_contenido_carpeta(carpeta_actual)['videos']|length }} ítems</b>
+            {% if carpeta_actual %}
+                {% set ruta_parcial = "" %}
+                {% for parte in carpeta_actual.split('/') %}
+                    {% set ruta_parcial = (ruta_parcial + '/' + parte) if ruta_parcial else parte %}
+                    / <a href="/editor-visual?carpeta={{ ruta_parcial }}">{{ parte }}</a>
+                {% endfor %}
+            {% endif %}
+            / <b>{{ carpetas|length + videos|length }} ítems</b>
         </div>
+
         <div class="content-grid">
             {% for c in carpetas %}
             <div class="tarjeta-item">
