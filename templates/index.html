@@ -81,8 +81,9 @@
                             {% if video.tipo == 'foto' %}
                                 <img class="portada-video" src="/media/{{ video.ruta_completa_descarga }}" alt="Portada foto">
                             {% else %}
-                                <video class="portada-video" autoplay loop muted playsinline style="pointer-events: none;">
-                                    <source src="/media/{{ video.ruta_completa_descarga }}" type="video/mp4">
+                                <!-- Fix de reproducción automática forzada -->
+                                <video class="portada-video" autoplay loop muted playsinline preload="auto" oncanplay="this.play()" style="pointer-events: none;">
+                                    <source src="/media/{{ video.ruta_completa_descarga }}">
                                 </video>
                             {% endif %}
                         </div>
