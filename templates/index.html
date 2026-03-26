@@ -34,15 +34,17 @@
         .portada-video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .titulo-video { color: #fff; font-size: 0.9em; text-align: center; padding: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #111; font-weight: bold; }
         
-        /* --- ESTILOS DEL COLLAGE FLOTANTE (MÁS GRANDE) --- */
-        .collage-flotante { position: absolute; bottom: 12px; left: 12px; width: 110px; height: 75px; background: #000; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); gap: 2px; border-radius: 6px; overflow: hidden; border: 2px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.9); z-index: 10; }
-        .collage-flotante img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        /* --- ESTILOS DEL COLLAGE FLOTANTE (DISEÑO 3 IMÁGENES VIP) --- */
+        .collage-flotante { position: absolute; bottom: 12px; left: 12px; width: 115px; height: 75px; background: #000; display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; border-radius: 6px; overflow: hidden; border: 2px solid #333; box-shadow: 0 5px 15px rgba(0,0,0,0.9); z-index: 10; }
+        .collage-flotante img, .collage-flotante .hueco-gris { width: 100%; height: 100%; object-fit: cover; display: block; }
+        /* La primera imagen del collage ocupará toda la altura izquierda */
+        .img-col-1 { grid-row: span 2; }
+        .hueco-gris { background: #222; }
 
         @media (max-width: 599px) { 
             .portada-wrapper { aspect-ratio: 9/16; } 
             .titulo-video { font-size: 0.8em; padding: 10px; } 
-            /* En móvil el collage también crece proporcionalmente */
-            .collage-flotante { width: 95px; height: 65px; bottom: 10px; left: 10px;}
+            .collage-flotante { width: 100px; height: 65px; bottom: 10px; left: 10px;}
         }
 
         /* --- ESTILOS DEL TEMPORIZADOR Y ETIQUETAS --- */
@@ -57,7 +59,7 @@
 
         /* --- CENTRADO PERFECTO DEL TÍTULO SUPERIOR --- */
         .header-top { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #333; margin-bottom: 15px; background-color: #111; width: 100%; box-sizing: border-box; border-radius: 0 0 10px 10px; }
-        .header-spacer { width: 45px; display: block; } /* Mismo ancho exacto que el botón de perfil para forzar el centro */
+        .header-spacer { width: 45px; display: block; }
         .titulo-principal { color: #f5c518; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 1.6em; font-weight: 900; flex: 1; }
         @media (max-width: 599px) { .titulo-principal { font-size: 1.25em; letter-spacing: 1px; } }
     </style>
@@ -65,11 +67,8 @@
 <body>
     <div class="main-wrapper">
         <div class="header-top">
-            <!-- Bloque invisible que balancea el menú -->
             <div class="header-spacer"></div>
-            
             <h1 class="titulo-principal">PUBLICIDAD VIP</h1>
-            
             <a href="/perfil" style="display: flex; align-items: center; justify-content: center; width: 45px; height: 45px; border-radius: 50%; background-color: #1a1a1a; color: #f5c518; border: none; text-decoration: none; transition: 0.3s; font-size: 20px; box-sizing: border-box; padding: 0; flex-shrink: 0;" onmouseover="this.style.backgroundColor='#333'; this.style.color='#f5c518'" onmouseout="this.style.backgroundColor='#1a1a1a'; this.style.color='#f5c518'">👤</a>
         </div>
         
@@ -79,7 +78,6 @@
         
         <div class="container">
             
-            <!-- NUEVO BOTÓN VOLVER DENTRO DE LAS CARPETAS -->
             {% if carpeta_actual != '' %}
             <div class="header-carpeta">
                 <a href="/" class="btn-volver-inicio">⬅️ Volver</a>
@@ -89,28 +87,31 @@
             
             <div class="grid-contenido">
                 
-                <!-- CARPETAS REDISEÑADAS Y ALINEADAS -->
+                <!-- CARPETAS -->
                 {% for carpeta in carpetas %}
                     <div class="tarjeta-item tarjeta-video">
                         <a href="/?carpeta={{ carpeta.ruta_relativa }}" style="display:block; text-decoration:none; height: 100%;">
                             <div class="portada-wrapper" style="background-color: #1a1a1a; display: flex; justify-content: center; align-items: center; position: relative;">
                                 
-                                <!-- Icono central sutil -->
                                 <div style="font-size: 5em; opacity: 0.15;">📁</div>
-                                
-                                <!-- Etiqueta superior derecha indicando CARPETA -->
                                 <div class="badge-carpeta">📁 CARPETA</div>
 
-                                <!-- COLLAGE FLOTANTE (MÁS GRANDE Y VISIBLE) -->
+                                <!-- COLLAGE FLOTANTE (ESTILO 3 IMÁGENES) -->
                                 {% if carpeta.miniaturas_collage %}
                                 <div class="collage-flotante">
-                                    {% for miniatura in carpeta.miniaturas_collage %}
-                                        <img src="/media/{{ miniatura }}">
+                                    <!-- Forzamos máximo 3 imágenes para el diseño VIP -->
+                                    {% set minis = carpeta.miniaturas_collage[:3] %}
+                                    
+                                    {% for miniatura in minis %}
+                                        <img src="/media/{{ miniatura }}" class="img-col-{{ loop.index }}">
                                     {% endfor %}
-                                    <!-- Rellenar huecos grises si la carpeta tiene menos de 4 archivos -->
-                                    {% if carpeta.miniaturas_collage|length == 1 %} <div style="background:#222;"></div><div style="background:#222;"></div><div style="background:#222;"></div> {% endif %}
-                                    {% if carpeta.miniaturas_collage|length == 2 %} <div style="background:#222;"></div><div style="background:#222;"></div> {% endif %}
-                                    {% if carpeta.miniaturas_collage|length == 3 %} <div style="background:#222;"></div> {% endif %}
+                                    
+                                    <!-- Rellenar huecos grises si la carpeta tiene 1 o 2 archivos -->
+                                    {% if minis|length == 1 %} 
+                                        <div class="hueco-gris"></div><div class="hueco-gris"></div> 
+                                    {% elif minis|length == 2 %} 
+                                        <div class="hueco-gris"></div> 
+                                    {% endif %}
                                 </div>
                                 {% endif %}
 
