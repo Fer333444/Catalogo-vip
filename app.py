@@ -15,7 +15,7 @@ ARCHIVO_EXPIRACIONES = 'expiraciones.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
-# EXTENSIONES PERMITIDAS (Videos y Fotos)
+# EXTENSIONES PERMITIDAS
 EXT_VIDEOS = ('.mp4', '.mov')
 EXT_FOTOS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 EXT_MEDIA = EXT_VIDEOS + EXT_FOTOS
@@ -68,37 +68,51 @@ def limpiar_expirados():
 def vigilante_de_tiempo():
     limpiar_expirados()
 
-# --- ESTADÍSTICAS ---
+# --- ESTADÍSTICAS Y VISITAS ---
 def obtener_fecha_hoy(): return datetime.now().strftime("%Y-%m-%d")
 
 def cargar_estadisticas():
     hoy = obtener_fecha_hoy()
-    stats_default = {"fecha": hoy, "descargas": {}}
+    # Ahora el modelo por defecto incluye visitas
+    stats_default = {"fecha": hoy, "descargas": {}, "visitas": 0}
+    
     if os.path.exists(ARCHIVO_STATS):
         with open(ARCHIVO_STATS, 'r') as f:
             try: data = json.load(f)
             except: data = stats_default
+            
+            # Si cambió de día, generamos el informe y reseteamos a 0
             if data.get("fecha") != hoy and "fecha" in data:
                 generar_informe(data)
                 return stats_default
-            if "fecha" not in data: data = {"fecha": hoy, "descargas": data}
+                
+            # Compatibilidad con el archivo viejo (para que no te dé error)
+            if "fecha" not in data: data["fecha"] = hoy
+            if "descargas" not in data: data["descargas"] = {}
+            if "visitas" not in data: data["visitas"] = 0
+            
             return data
     return stats_default
 
 def generar_informe(data_vieja):
     fecha_ayer = data_vieja.get("fecha", "Desconocida")
     descargas = data_vieja.get("descargas", {})
+    visitas = data_vieja.get("visitas", 0)
+    
     ruta = os.path.join(CARPETA_INFORMES, f"informe_{fecha_ayer}.txt")
     with open(ruta, 'w', encoding='utf-8') as f:
-        f.write(f"=== INFORME VIP ===\nFecha: {fecha_ayer}\n\n")
+        f.write(f"=== INFORME VIP ===\nFecha: {fecha_ayer}\n")
+        f.write(f"👁️ VISITAS TOTALES A LA WEB: {visitas}\n\n")
+        
         total = sum(descargas.values())
+        f.write("--- DESCARGAS DE VIDEOS ---\n")
         for video, cantidad in descargas.items(): f.write(f"- {video}: {cantidad} descargas\n")
         f.write(f"\nTOTAL: {total} DESCARGAS\n")
 
 def guardar_estadisticas(data):
     with open(ARCHIVO_STATS, 'w') as f: json.dump(data, f)
 
-# --- ESCÁNER JERÁRQUICO Y RENOMBRAMIENTO ---
+# --- ESCÁNER JERÁRQUICO ---
 def obtener_siguiente_numero():
     max_num = 0
     for root, dirs, files in os.walk(CARPETA_VIDEOS_RAIZ):
@@ -109,10 +123,8 @@ def obtener_siguiente_numero():
                 if len(partes) >= 2:
                     try:
                         num = int(partes[1])
-                        if num > max_num:
-                            max_num = num
-                    except ValueError:
-                        pass
+                        if num > max_num: max_num = num
+                    except ValueError: pass
     return max_num + 1
 
 def escanear_contenido_carpeta(subcarpeta_relativa=''):
@@ -171,6 +183,12 @@ def obtener_lista_carpetas_flat():
 # --- RUTAS PÚBLICAS Y ADMIN STATS ---
 @app.route('/')
 def index():
+    # MAGIA: Cada vez que alguien entra a la página, sumamos 1 visita
+    with cerrojo_stats:
+        data = cargar_estadisticas()
+        data["visitas"] = data.get("visitas", 0) + 1
+        guardar_estadisticas(data)
+        
     carpeta_actual = request.args.get('carpeta', default='')
     contenido = escanear_contenido_carpeta(carpeta_actual)
     return render_template('index.html', carpetas=contenido["carpetas"], videos=contenido["videos"], carpeta_actual=carpeta_actual)
@@ -182,14 +200,12 @@ def ver_video(ruta_video):
     video_seleccionado = {"titulo": titulo_limpio, "archivo": os.path.basename(ruta_video), "ruta_relativa": ruta_video, "tipo": tipo_media}
     return render_template('reproductor.html', video=video_seleccionado)
 
-# --- DESCARGA CON ACTUALIZACIÓN DE HORA Y ANTI-CACHÉ ---
 @app.route('/download/<path:filename>')
 def download_video(filename):
     nombre_limpio_archivo = os.path.basename(filename)
     ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, filename)
     
-    if os.path.exists(ruta_fisica):
-        os.utime(ruta_fisica, None)
+    if os.path.exists(ruta_fisica): os.utime(ruta_fisica, None)
         
     with cerrojo_stats:
         data = cargar_estadisticas()
@@ -209,11 +225,15 @@ def panel_admin_stats():
     with cerrojo_stats: data = cargar_estadisticas()
     descargas = data["descargas"]
     fecha_hoy = data["fecha"]
+    visitas_hoy = data.get("visitas", 0) # Obtenemos las visitas
+    
     catalogo_flat = obtener_todo_el_catalogo_flat()
     datos_completos = []
     for v in catalogo_flat:
         datos_completos.append({"titulo": v['titulo'], "carpeta": v['carpeta'], "archivo": v['archivo'], "descargas": descargas.get(v['archivo'], 0)})
-    return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy)
+        
+    # Le mandamos las visitas al HTML
+    return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy, visitas=visitas_hoy)
 
 # --- RUTAS DEL EDITOR ---
 @app.route('/editor-visual')
@@ -242,11 +262,9 @@ def crear_carpeta():
                 guardar_expiraciones(exp)
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
 
-# --- AQUÍ ESTÁ LA NUEVA LÓGICA DE SUBIDA MÚLTIPLE ---
 @app.route('/admin/subir-video', methods=['POST'])
 def subir_video():
     carpeta_actual = request.form.get('carpeta_actual', '')
-    # Ahora recibe una lista de videos
     videos_files = request.files.getlist('video_file') 
     tiempo_limite = request.form.get('tiempo_limite', '0')
     
@@ -260,7 +278,6 @@ def subir_video():
                 ext_original = os.path.splitext(video_file.filename)[1].lower()
                 ext_final = ext_original if ext_original in EXT_MEDIA else '.mp4'
                 
-                # Nombra automáticamente: video_1, video_2...
                 nombre_archivo_seguro = f"video_{siguiente_num}{ext_final}"
                 siguiente_num += 1
                 
@@ -269,13 +286,11 @@ def subir_video():
                 
                 video_file.save(ruta_fisica_guardado)
 
-                # Aplica el mismo horario a todos
                 if tiempo_limite != '0':
                     exp[ruta_relativa] = {"tipo": "archivo", "limite": tiempo_limite, "creacion": time.time()}
                     modificado = True
                     
-        if modificado:
-            guardar_expiraciones(exp)
+        if modificado: guardar_expiraciones(exp)
         
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
