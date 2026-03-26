@@ -372,16 +372,63 @@ def download_video(filename):
     respuesta.headers["Pragma"] = "no-cache"
     respuesta.headers["Expires"] = "0"
     return respuesta
+# --- GENERADOR DEL INFORME EJECUTIVO EN TXT ---
+def generar_informe_txt(visitas, videos_ordenados, fecha):
+    hora_actual = datetime.now().strftime("%H:%M:%S")
+    ruta_informe = os.path.join(CARPETA_INFORMES, f"informe_{fecha}.txt")
+    
+    total_descargas = sum(v['descargas'] for v in videos_ordenados)
+    
+    tasa_interaccion = 0.0
+    if visitas > 0:
+        tasa_interaccion = round((total_descargas / visitas) * 100, 1)
+
+    mejor_video = "Aún no hay descargas"
+    if videos_ordenados and videos_ordenados[0]['descargas'] > 0:
+        mejor_video = f"{videos_ordenados[0]['titulo']} con {videos_ordenados[0]['descargas']} descargas!"
+
+    lineas = [
+        "=========================================================",
+        "          📊 INFORME DIARIO - PUBLICIDAD VIP             ",
+        "=========================================================",
+        f"📅 Fecha del reporte: {fecha}",
+        f"⏱️ Generado/Actualizado a las: {hora_actual}",
+        "---------------------------------------------------------",
+        " 📈 RESUMEN GENERAL:",
+        f"  👁️  Personas que entraron al catálogo: {visitas}",
+        f"  📥  Total de descargas (todos los videos): {total_descargas}",
+        f"  🔥  Tasa de interacción: {tasa_interaccion}%",
+        "---------------------------------------------------------",
+        " 🏆 EL CONTENIDO ESTRELLA DEL DÍA:",
+        f"      >> {mejor_video} <<",
+        "---------------------------------------------------------",
+        " 📋 DESGLOSE POR VIDEO (Del más al menos descargado):\n"
+    ]
+
+    for v in videos_ordenados:
+        carpeta_txt = v['carpeta'] if v['carpeta'] else 'Raíz'
+        lineas.append(f"  - {v['descargas']:>2} descargas | [{carpeta_txt}] {v['titulo']}")
+
+    lineas.append("\n=========================================================")
+    lineas.append(" Fin del reporte.")
+
+    # Guardamos el archivo en la caja fuerte usando UTF-8 para que soporten emojis
+    with open(ruta_informe, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lineas))
+
 
 @app.route('/admin-stats')
 def panel_admin_stats():
-    with cerrojo_stats: data = cargar_estadisticas()
-    descargas = data["descargas"]
-    fecha_hoy = data["fecha"]
+    with cerrojo_stats: 
+        data = cargar_estadisticas()
+    
+    descargas = data.get("descargas", {})
+    fecha_hoy = data.get("fecha", obtener_fecha_hoy())
     visitas_hoy = data.get("visitas", 0)
     
     catalogo_flat = obtener_todo_el_catalogo_flat()
     datos_completos = []
+    
     for v in catalogo_flat:
         datos_completos.append({
             "titulo": v['titulo'], 
@@ -391,7 +438,13 @@ def panel_admin_stats():
             "ruta_relativa": v['ruta_relativa'],
             "tipo": v['tipo']
         })
+        
+    # Ordenamos de más descargas a menos
     datos_completos.sort(key=lambda x: x['descargas'], reverse=True)
+    
+    # ¡LA MAGIA AQUÍ! Generamos el reporte .txt en segundo plano automáticamente
+    generar_informe_txt(visitas_hoy, datos_completos, fecha_hoy)
+    
     return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy, visitas=visitas_hoy)
 
 @app.route('/editor-visual')
