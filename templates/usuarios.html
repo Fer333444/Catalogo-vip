@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Datos de Usuarios VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #111; padding: 30px; border-radius: 10px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        h1, h2 { color: #f5c518; text-transform: uppercase; letter-spacing: 1px; margin-top: 0;}
+        
+        /* Alertas */
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; }
+        .alert.error { background-color: #330000; border: 1px solid #ff4444; color: #ff8888; }
+        .alert.exito { background-color: #003311; border: 1px solid #00C851; color: #88ffaa; }
+
+        /* Formulario de agregar */
+        .form-agregar { background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 30px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
+        .form-agregar input { flex: 1; min-width: 200px; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; }
+        .form-agregar input:focus { outline: none; border-color: #f5c518; }
+        .btn-agregar { background-color: #f5c518; color: #000; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-agregar:hover { background-color: #e0b416; }
+
+        /* Tabla */
+        table { width: 100%; border-collapse: collapse; background: #1a1a1a; border-radius: 8px; overflow: hidden;}
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #333; }
+        th { background-color: #222; color: #f5c518; font-weight: bold;}
+        tr:hover { background-color: #2a2a2a; }
+        
+        .verificado { color: #00C851; font-weight: bold; background: rgba(0, 200, 81, 0.1); padding: 5px 10px; border-radius: 5px;}
+        .no-verificado { color: #ff4444; font-weight: bold; background: rgba(255, 68, 68, 0.1); padding: 5px 10px; border-radius: 5px;}
+        
+        /* Boton Eliminar */
+        .btn-eliminar { background-color: #ff4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-eliminar:hover { background-color: #cc0000; }
+        
+        .btn-volver { display: inline-block; margin-top: 25px; padding: 12px 20px; background-color: #333; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .btn-volver:hover { background-color: #f5c518; color: #000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Control de Usuarios VIP</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Panel para agregar manualmente -->
+        <div class="form-agregar">
+            <h3 style="width: 100%; margin-top: 0; color: #ddd; font-size: 16px;">Agregar cliente manualmente (Entra directo sin verificar)</h3>
+            <form method="POST" action="/admin/agregar-usuario" style="display: flex; gap: 10px; width: 100%;">
+                <input type="email" name="correo" placeholder="Correo del cliente" required>
+                <input type="text" name="password" placeholder="Asignar contraseña" required>
+                <button type="submit" class="btn-agregar">+ Crear Usuario</button>
+            </form>
+        </div>
+        
+        <!-- Tabla de usuarios -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Correo Electrónico</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td style="font-weight: 500;">{{ u.correo }}</td>
+                    <td>
+                        {% if u.verificado %}
+                            <span class="verificado">✅ Verificado</span>
+                        {% else %}
+                            <span class="no-verificado">⏳ Falta verificar</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="/admin/eliminar-usuario" onsubmit="return confirm('¿Estás seguro de eliminar al usuario {{ u.correo }}? Perderá acceso inmediatamente.');">
+                            <input type="hidden" name="correo" value="{{ u.correo }}">
+                            <button type="submit" class="btn-eliminar">🗑️ Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #888; padding: 30px;">Aún no hay clientes registrados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="text-align: center;">
+            <a href="/editor-visual" class="btn-volver">⬅ Volver al Editor Visual</a>
+        </div>
+    </div>
+</body>
+</html>

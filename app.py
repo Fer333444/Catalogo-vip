@@ -428,6 +428,48 @@ def eliminar_item():
                     del exp[item_ruta]
                     guardar_expiraciones(exp)
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
+@app.route('/admin-usuarios')
+def panel_usuarios():
+    usuarios = cargar_usuarios()
+    lista_usuarios = []
+    for correo, datos in usuarios.items():
+        lista_usuarios.append({
+            "correo": correo,
+            "verificado": datos.get("verificado", False)
+        })
+    return render_template('usuarios.html', usuarios=lista_usuarios)
+
+@app.route('/admin/agregar-usuario', methods=['POST'])
+def admin_agregar_usuario():
+    correo = request.form.get('correo').lower().strip()
+    password = request.form.get('password')
+    usuarios = cargar_usuarios()
+
+    if correo in usuarios:
+        flash(f"El correo {correo} ya está registrado.", "error")
+    else:
+        # Si el admin lo agrega, entra directo sin necesidad de verificar correo
+        usuarios[correo] = {
+            "password": generate_password_hash(password),
+            "verificado": True, 
+            "token": None
+        }
+        guardar_usuarios(usuarios)
+        flash(f"Usuario {correo} agregado con éxito y verificado.", "exito")
+        
+    return redirect(url_for('panel_usuarios'))
+
+@app.route('/admin/eliminar-usuario', methods=['POST'])
+def admin_eliminar_usuario():
+    correo = request.form.get('correo')
+    usuarios = cargar_usuarios()
+    
+    if correo in usuarios:
+        del usuarios[correo]
+        guardar_usuarios(usuarios)
+        flash(f"Usuario {correo} eliminado correctamente.", "exito")
+        
+    return redirect(url_for('panel_usuarios'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
