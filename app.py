@@ -48,18 +48,22 @@ def guardar_usuarios(data):
 
 def enviar_correo_verificacion(destinatario, token, url_base):
     enlace = f"{url_base}verificar/{token}"
+    
+    # Diseño limpio, blanco y minimalista (evita la carpeta de Promociones)
     html_content = f"""
-    <div style="font-family: Arial, sans-serif; text-align: center; background-color: #0a0a0a; color: white; padding: 40px; border-radius: 10px;">
-        <h2 style="color: #f5c518;">¡Bienvenido al Catálogo VIP!</h2>
-        <p style="font-size: 16px;">Para activar tu cuenta y acceder al contenido exclusivo, haz clic en el siguiente botón:</p>
+    <div style="font-family: Arial, sans-serif; font-size: 15px; color: #222; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <p>Hola,</p>
+        <p>Gracias por registrarte en nuestro catálogo. Ya casi terminamos.</p>
+        <p>Para activar tu cuenta de forma segura y acceder al contenido, por favor confirma tu acceso haciendo clic en el siguiente enlace:</p>
+        <p style="margin: 25px 0;"><a href="{enlace}" style="color: #1a73e8; text-decoration: none; font-weight: bold; word-break: break-all;">{enlace}</a></p>
+        <p>Si el enlace no funciona al darle clic, cópialo y pégalo en la barra superior de tu navegador.</p>
         <br>
-        <a href="{enlace}" style="background-color: #f5c518; color: black; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 8px; font-size: 18px; display: inline-block;">VERIFICAR MI CUENTA</a>
-        <br><br>
-        <p style="color: #888; font-size: 12px;">Si no te registraste en nuestra plataforma, ignora este correo.</p>
+        <p>Saludos cordiales,<br>El Equipo de Soporte</p>
     </div>
     """
+    
     msg = MIMEText(html_content, 'html')
-    msg['Subject'] = 'Verifica tu acceso VIP'
+    msg['Subject'] = 'Tu acceso al catálogo'  # Asunto más natural, menos comercial
     msg['From'] = CORREO_REMITENTE
     msg['To'] = destinatario
 
