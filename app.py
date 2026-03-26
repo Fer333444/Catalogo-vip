@@ -574,12 +574,29 @@ def eliminar_item():
 def panel_usuarios():
     usuarios = cargar_usuarios()
     lista_usuarios = []
+    
+    # Variables para nuestros nuevos contadores
+    verificados_count = 0
+    no_verificados_count = 0
+
     for correo, datos in usuarios.items():
+        is_verified = datos.get("verificado", False)
         lista_usuarios.append({
             "correo": correo,
-            "verificado": datos.get("verificado", False)
+            "verificado": is_verified
         })
-    return render_template('usuarios.html', usuarios=lista_usuarios)
+        
+        # Contamos cuántos hay de cada uno
+        if is_verified:
+            verificados_count += 1
+        else:
+            no_verificados_count += 1
+
+    return render_template('usuarios.html', 
+                           usuarios=lista_usuarios, 
+                           total=len(usuarios),
+                           verificados=verificados_count,
+                           no_verificados=no_verificados_count)
 
 @app.route('/admin/agregar-usuario', methods=['POST'])
 def admin_agregar_usuario():

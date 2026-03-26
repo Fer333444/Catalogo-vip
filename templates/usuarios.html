@@ -14,6 +14,18 @@
         .top-bar a { text-decoration: none; color: #ccc; background: #1a1a1a; padding: 10px 18px; border-radius: 8px; border: 1px solid #333; font-weight: bold; font-size: 0.85em; transition: 0.2s; white-space: nowrap;}
         .top-bar a:hover { background: #333; color: #fff; border-color: #f5c518; }
 
+        /* --- NUEVO: PANEL DE ESTADÍSTICAS --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-box { background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .stat-box.total { border-bottom: 3px solid #f5c518; }
+        .stat-box.verificados { border-bottom: 3px solid #00C851; }
+        .stat-box.pendientes { border-bottom: 3px solid #ff4444; }
+        .stat-box .numero { font-size: 2.2em; font-weight: 900; margin: 5px 0; }
+        .stat-box.total .numero { color: #f5c518; }
+        .stat-box.verificados .numero { color: #00C851; }
+        .stat-box.pendientes .numero { color: #ff4444; }
+        .stat-box .etiqueta { color: #aaa; font-size: 0.8em; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+
         /* Formulario de agregar responsivo */
         .form-panel { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; margin-bottom: 25px;}
         .form-panel h3 { color: #ccc; margin-top: 0; margin-bottom: 20px; font-size: 1.1em;}
@@ -29,17 +41,16 @@
         .alert.error { background-color: #330000; border-color: #ff4444; color: #ff8888; }
         .alert.exito { background-color: #003311; border-color: #00C851; color: #88ffaa; }
 
-        /* --- SISTEMA DE TABLA RESPONSIVA PARA MÓVIL --- */
+        /* SISTEMA DE TABLA RESPONSIVA */
         .usuarios-container { width: 100%; }
         
-        /* Vista de Escritorio: Tabla Estándar */
+        /* Vista de Escritorio */
         .desktop-table { display: table; width: 100%; border-collapse: collapse; background: #111; border-radius: 12px; overflow: hidden; border: 1px solid #222; }
         .desktop-table th, .desktop-table td { padding: 18px 20px; text-align: left; border-bottom: 1px solid #222; }
         .desktop-table th { background-color: #1a1a1a; color: #f5c518; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-size: 0.85em;}
-        .desktop-table tr:last-child td { border-bottom: none; }
         .desktop-table tr:hover { background-color: #1a1a1a; }
         
-        /* Vista Móvil: Lista de Tarjetas (Oculta en Escritorio) */
+        /* Vista Móvil */
         .mobile-list { display: none; grid-template-columns: 1fr; gap: 10px; width: 100%; }
         .mobile-user-card { background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; box-sizing: border-box;}
         .mobile-user-card .user-email { font-weight: bold; font-size: 1.1em; color: #fff; word-break: break-all; margin-bottom: 12px; display: block;}
@@ -56,9 +67,7 @@
         .btn-eliminar:hover { background: #ff4444; color: #fff; }
         .desktop-table .btn-eliminar { padding: 8px 14px; font-size: 0.85em; width: auto;}
 
-        /* --- BREAKPOINTS RESPONSIVOS --- */
         @media (max-width: 768px) {
-            /* Ocultar tabla escritorio, mostrar lista móvil */
             .desktop-table { display: none; }
             .mobile-list { display: grid; }
             .top-bar h1 { font-size: 1.2em; }
@@ -71,7 +80,24 @@
         <h1>👥 Control de Usuarios</h1>
         <a href="/editor-visual">⬅️ Salir al Editor</a>
     </div>
+    
     <div class="container">
+        
+        <div class="stats-grid">
+            <div class="stat-box total">
+                <div class="numero">{{ total }}</div>
+                <div class="etiqueta">Total Clientes</div>
+            </div>
+            <div class="stat-box verificados">
+                <div class="numero">{{ verificados }}</div>
+                <div class="etiqueta">✅ Verificados</div>
+            </div>
+            <div class="stat-box pendientes">
+                <div class="numero">{{ no_verificados }}</div>
+                <div class="etiqueta">⏳ Pendientes</div>
+            </div>
+        </div>
+
         <form method="POST" action="/admin/agregar-usuario" class="form-panel">
             <h3>Agregar cliente manualmente (Entra directo sin verificar)</h3>
             <div class="form-row">
@@ -104,7 +130,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form method="POST" action="/admin/eliminar-usuario" style="display:inline;" onsubmit="return confirm('¿Borrar definitivamente a {{ u.correo }}? Perderá acceso inmediato.');">
+                            <form method="POST" action="/admin/eliminar-usuario" style="display:inline;" onsubmit="return confirm('¿Borrar definitivamente a {{ u.correo }}?');">
                                 <input type="hidden" name="correo" value="{{ u.correo }}">
                                 <button type="submit" class="btn-eliminar">🗑️ Eliminar</button>
                             </form>
