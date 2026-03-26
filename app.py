@@ -26,7 +26,7 @@ CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 SMTP_SERVER = "smtp-relay.brevo.com"
 SMTP_PORT = 587
 SMTP_USERNAME = "a6199f001@smtp-brevo.com"  # Tu nuevo usuario de la captura
-SMTP_PASSWORD = "xsmtpsib-7f7becc14cb3e6f5405ec47151abf800c424298cd25527685fd38b4644b1e320-JfoKGNoiCdlmAv4y" # Tu nueva clave xsmtpsib-...
+SMTP_PASSWORD = os.environ.get("CLAVE_BREVO") # <-- ¡Aquí está la magia!
 CORREO_REMITENTE = "contenido2025yt@gmail.com"  # Tu nuevo correo
 
 EXT_VIDEOS = ('.mp4', '.mov')
