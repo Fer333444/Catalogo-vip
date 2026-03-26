@@ -262,33 +262,55 @@ def obtener_siguiente_numero():
                     except ValueError: pass
     return max_num + 1
 
-def escanear_contenido_carpeta(subcarpeta_relativa=''):
-    ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, subcarpeta_relativa)
-    if not os.path.commonprefix([os.path.abspath(ruta_fisica), os.path.abspath(CARPETA_VIDEOS_RAIZ)]) == os.path.abspath(CARPETA_VIDEOS_RAIZ):
-        ruta_fisica = CARPETA_VIDEOS_RAIZ
-        subcarpeta_relativa = ''
-    contenido = {"carpetas": [], "videos": []}
-    if not os.path.exists(ruta_fisica): return contenido
-    exp = cargar_expiraciones() 
-    for item in os.listdir(ruta_fisica):
-        ruta_completa_item = os.path.join(ruta_fisica, item)
-        ruta_web_relativa = os.path.join(subcarpeta_relativa, item).replace('\\', '/')
-        info_exp = exp.get(ruta_web_relativa, {})
-        limite_val = str(info_exp.get('limite', '0'))
-        fecha_creacion = info_exp.get('creacion', 0)
-        segundos_limite = 0
-        if limite_val.endswith('m'): segundos_limite = int(limite_val.replace('m', '')) * 60
-        elif limite_val.endswith('h'): segundos_limite = int(limite_val.replace('h', '')) * 3600
-        else: segundos_limite = int(limite_val) * 3600 if int(limite_val) > 0 else 0
-        timestamp_exp = fecha_creacion + segundos_limite if segundos_limite > 0 else 0
+def escanear_contenido_carpeta(ruta_relativa=''):
+    ruta_completa = os.path.join(CARPETA_VIDEOS_RAIZ, ruta_relativa)
+    carpetas = []
+    videos = []
+    if not os.path.exists(ruta_completa):
+        return {'carpetas': carpetas, 'videos': videos}
 
-        if os.path.isdir(ruta_completa_item):
-            contenido["carpetas"].append({"nombre": item, "ruta_relativa": ruta_web_relativa, "timestamp_exp": timestamp_exp, "total_segundos": segundos_limite})
-        elif item.lower().endswith(EXT_MEDIA):
-            tipo_media = 'foto' if item.lower().endswith(EXT_FOTOS) else 'video'
-            titulo_limpio = item.rsplit('.', 1)[0].replace('_', ' ')
-            contenido["videos"].append({"archivo": item, "ruta_completa_descarga": ruta_web_relativa, "titulo": titulo_limpio, "timestamp_exp": timestamp_exp, "total_segundos": segundos_limite, "tipo": tipo_media})
-    return contenido
+    expiraciones = cargar_expiraciones()
+    ahora = int(time.time())
+    modificado = False
+
+    for elemento in sorted(os.listdir(ruta_completa)):
+        ruta_elemento = os.path.join(ruta_completa, elemento)
+        ruta_relativa_elemento = os.path.join(ruta_relativa, elemento).replace('\\', '/')
+
+        if os.path.isdir(ruta_elemento):
+            carpetas.append({
+                'nombre': elemento,
+                'ruta_relativa': ruta_relativa_elemento
+            })
+        elif os.path.isfile(ruta_elemento) and elemento.lower().endswith(EXT_MEDIA):
+            exp_data = expiraciones.get(ruta_relativa_elemento, {})
+            expira_en = exp_data.get('expira_en', 0)
+            total_segundos = exp_data.get('total_segundos', 0)
+
+            if expira_en > 0 and ahora > expira_en:
+                try:
+                    os.remove(ruta_elemento)
+                    del expiraciones[ruta_relativa_elemento]
+                    modificado = True
+                except: pass
+                continue
+
+            tipo = 'foto' if elemento.lower().endswith(EXT_FOTOS) else 'video'
+            
+            # Transformamos "video_1.mp4" a "Video 1" visualmente elegante
+            titulo_limpio = elemento.rsplit('.', 1)[0].replace('_', ' ').title()
+
+            videos.append({
+                'archivo': elemento,
+                'titulo': titulo_limpio,
+                'ruta_completa_descarga': ruta_relativa_elemento,
+                'tipo': tipo,
+                'timestamp_exp': expira_en,
+                'total_segundos': total_segundos
+            })
+            
+    if modificado: guardar_expiraciones(expiraciones)
+    return {'carpetas': carpetas, 'videos': videos}
 
 def obtener_todo_el_catalogo_flat():
     videos = []
@@ -404,12 +426,11 @@ def subir_video():
         
     archivos = request.files.getlist('video_file')
     carpeta_actual = request.form.get('carpeta_actual', '').strip('/')
-    tiempo_limite = request.form.get('tiempo_limite', '0') # ∞ por defecto
+    tiempo_limite = request.form.get('tiempo_limite', '0')
 
     if not archivos or (len(archivos) == 1 and archivos[0].filename == ''):
         return redirect(f'/editor-visual?carpeta={carpeta_actual}')
 
-    # Cálculo de expiración
     tiempo_segundos = 0
     if tiempo_limite.endswith('m'): tiempo_segundos = int(tiempo_limite[:-1]) * 60
     elif tiempo_limite.endswith('h'): tiempo_segundos = int(tiempo_limite[:-1]) * 3600
@@ -418,24 +439,36 @@ def subir_video():
     expiraciones = cargar_expiraciones()
     agregados = 0
 
-    for archivo in archivos:
-        # CORRECCIÓN: Verificamos la extensión de forma directa y segura
-        if archivo and archivo.filename.lower().endswith(EXT_MEDIA):
-            nombre_original = secure_filename(archivo.filename)
-            nombre_unico = str(int(time.time())) + '_' + nombre_original
-            
-            # Guardamos el video dentro de la caja fuerte blindada (/data/videos/...)
-            ruta_destino = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual)
-            if not os.path.exists(ruta_destino): os.makedirs(ruta_destino)
-            archivo.save(os.path.join(ruta_destino, nombre_unico))
+    ruta_destino = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual)
+    if not os.path.exists(ruta_destino): 
+        os.makedirs(ruta_destino)
 
-            # Guardamos la fecha de expiración si el usuario seleccionó un tiempo
+    # Contamos cuántos videos hay para asignar el número correcto
+    archivos_existentes = [f for f in os.listdir(ruta_destino) if f.lower().endswith(EXT_MEDIA)]
+    contador = len(archivos_existentes) + 1
+
+    for archivo in archivos:
+        if archivo and archivo.filename.lower().endswith(EXT_MEDIA):
+            extension = archivo.filename.rsplit('.', 1)[1].lower()
+            
+            # MAGIA: Forzamos nombre limpio SIN espacios para que el reproductor no falle
+            nombre_limpio = f"video_{contador}.{extension}"
+            
+            # Evitamos duplicados al 100%
+            while os.path.exists(os.path.join(ruta_destino, nombre_limpio)):
+                contador += 1
+                nombre_limpio = f"video_{contador}.{extension}"
+            
+            # Guardamos en la caja fuerte
+            archivo.save(os.path.join(ruta_destino, nombre_limpio))
+
             if timestamp_exp > 0:
-                ruta_relativa = os.path.join(carpeta_actual, nombre_unico).replace('\\', '/')
+                ruta_relativa = os.path.join(carpeta_actual, nombre_limpio).replace('\\', '/')
                 expiraciones[ruta_relativa] = {
                     'expira_en': timestamp_exp,
                     'total_segundos': tiempo_segundos
                 }
+            contador += 1
             agregados += 1
 
     if agregados > 0: 
