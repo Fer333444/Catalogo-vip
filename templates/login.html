@@ -20,17 +20,16 @@
         .btn-login { background-color: #f5c518; color: #000; margin-bottom: 15px;}
         .btn-login:hover { background-color: #e0b416; }
         
-        .btn-registro { background-color: transparent; border: 2px solid #555; color: #aaa;}
-        .btn-registro:hover { border-color: #f5c518; color: #f5c518;}
-        
-        .nota { color: #666; font-size: 0.85em; margin-top: 20px; }
+        .enlace-registro { display: block; margin-top: 20px; color: #aaa; text-decoration: none; font-size: 0.9em; }
+        .enlace-registro span { color: #f5c518; font-weight: bold; }
+        .enlace-registro:hover span { text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <div class="login-box">
     <h2>Catálogo VIP</h2>
-    <p style="color:#888; margin-bottom: 30px;">Ingresa tus datos o crea una cuenta gratis para ver el contenido.</p>
+    <p style="color:#888; margin-bottom: 30px;">Ingresa tus datos para ver el contenido.</p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -44,11 +43,10 @@
         <input type="email" name="correo" placeholder="Correo Electrónico" required>
         <input type="password" name="password" placeholder="Contraseña" required>
         
-        <button type="submit" name="accion" value="login" class="btn-login">🔒 Iniciar Sesión</button>
-        <button type="submit" name="accion" value="registro" class="btn-registro">Crear Cuenta Nueva</button>
+        <button type="submit" class="btn-login">🔒 Iniciar Sesión</button>
     </form>
     
-    <div class="nota">Al registrarte, te enviaremos un correo para verificar que eres tú. Revisa la carpeta de Spam.</div>
+    <a href="/registro" class="enlace-registro">¿No tienes cuenta? <span>Regístrate aquí</span></a>
 </div>
 
 </body>

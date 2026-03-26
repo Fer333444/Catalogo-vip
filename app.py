@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'super_clave_secreta_vip_cambiame' # Mantiene las sesiones abiertas para siempre
+app.secret_key = 'super_clave_secreta_vip_cambiame' 
 
 cerrojo_stats = threading.Lock()
 ARCHIVO_STATS = 'stats.json'
@@ -22,10 +22,12 @@ ARCHIVO_USUARIOS = 'usuarios.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
-# --- CONFIGURACIÓN DE CORREO Y ADMIN ---
-CORREO_REMITENTE = "fernandoburgos8001@gmail.com"  # PON TU GMAIL AQUÍ
-PASS_REMITENTE = "kbzxpytgkldfvykm" # (Te explico abajo cómo sacarla)
-ADMIN_EMAIL = "fernandoburgos8001@gmail.com" # PON TU GMAIL AQUÍ (Para que solo tú entres al editor)
+# --- CONFIGURACIÓN DE CORREO (BREVO) ---
+SMTP_SERVER = "smtp-relay.brevo.com"
+SMTP_PORT = 587
+SMTP_USERNAME = "a618af001@smtp-brevo.com" 
+SMTP_PASSWORD = "xsmtpsib-495fcac852d5d3ab9d5a3fb442a731b319931ed1833f0745782bb77a7eca9faf-lMD81OhPD54ueDhp" # Ej: xsmtpsib-xxxxxxxx...
+CORREO_REMITENTE = "fernandoburgos8001@gmail.com"  # Tu correo registrado en Brevo
 
 EXT_VIDEOS = ('.mp4', '.mov')
 EXT_FOTOS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
@@ -34,7 +36,6 @@ EXT_MEDIA = EXT_VIDEOS + EXT_FOTOS
 for carpeta in [CARPETA_INFORMES, CARPETA_VIDEOS_RAIZ]:
     if not os.path.exists(carpeta): os.makedirs(carpeta)
 
-# --- SISTEMA DE USUARIOS Y AUTENTICACIÓN ---
 def cargar_usuarios():
     if os.path.exists(ARCHIVO_USUARIOS):
         with open(ARCHIVO_USUARIOS, 'r') as f:
@@ -63,17 +64,16 @@ def enviar_correo_verificacion(destinatario, token, url_base):
     msg['To'] = destinatario
 
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.starttls()
-        server.login(CORREO_REMITENTE, PASS_REMITENTE)
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
         server.sendmail(CORREO_REMITENTE, [destinatario], msg.as_string())
         server.quit()
         return True
     except Exception as e:
-        print(f"Error enviando correo: {e}")
+        print(f"Error enviando correo con Brevo: {e}")
         return False
 
-# Escudo para proteger el catálogo (Solo usuarios registrados entran)
 def login_requerido(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -82,58 +82,62 @@ def login_requerido(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Escudo para el Editor (Solo TU correo entra)
-def admin_requerido(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'usuario' not in session or session['usuario'] != ADMIN_EMAIL:
-            return "Acceso Denegado. Solo el administrador puede entrar aquí.", 403
-        return f(*args, **kwargs)
-    return decorated_function
 
-# --- RUTAS DE LOGIN Y REGISTRO ---
+# --- NUEVAS RUTAS SEPARADAS DE LOGIN Y REGISTRO ---
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'usuario' in session: return redirect(url_for('index'))
     
     if request.method == 'POST':
-        accion = request.form.get('accion')
         correo = request.form.get('correo').lower().strip()
         password = request.form.get('password')
         usuarios = cargar_usuarios()
 
-        if accion == 'registro':
-            if correo in usuarios:
-                flash("Este correo ya está registrado. Inicia sesión.", "error")
+        user = usuarios.get(correo)
+        if user and check_password_hash(user['password'], password):
+            if not user['verificado']:
+                flash("Debes revisar tu correo y verificar tu cuenta primero.", "error")
             else:
-                token = str(uuid.uuid4())
-                usuarios[correo] = {
-                    "password": generate_password_hash(password),
-                    "verificado": False,
-                    "token": token
-                }
-                guardar_usuarios(usuarios)
-                # Obtenemos la URL de tu render automáticamente
-                url_base = request.host_url 
-                enviado = enviar_correo_verificacion(correo, token, url_base)
-                if enviado:
-                    flash("¡Registro exitoso! Revisa tu correo (y la carpeta SPAM) y dale al botón para entrar.", "exito")
-                else:
-                    flash("Error al enviar el correo. Intenta de nuevo.", "error")
-                    
-        elif accion == 'login':
-            user = usuarios.get(correo)
-            if user and check_password_hash(user['password'], password):
-                if not user['verificado']:
-                    flash("Debes revisar tu correo y verificar tu cuenta primero.", "error")
-                else:
-                    session['usuario'] = correo
-                    session.permanent = True # La sesión no se borra al cerrar el navegador
-                    return redirect(url_for('index'))
-            else:
-                flash("Correo o contraseña incorrectos.", "error")
+                session['usuario'] = correo
+                session.permanent = True
+                return redirect(url_for('index'))
+        else:
+            flash("Correo o contraseña incorrectos.", "error")
 
     return render_template('login.html')
+
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if 'usuario' in session: return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        correo = request.form.get('correo').lower().strip()
+        password = request.form.get('password')
+        usuarios = cargar_usuarios()
+
+        if correo in usuarios:
+            flash("Este correo ya está registrado. Por favor, inicia sesión.", "error")
+            return redirect(url_for('login'))
+        else:
+            token = str(uuid.uuid4())
+            usuarios[correo] = {
+                "password": generate_password_hash(password),
+                "verificado": False,
+                "token": token
+            }
+            guardar_usuarios(usuarios)
+            url_base = request.host_url 
+            enviado = enviar_correo_verificacion(correo, token, url_base)
+            if enviado:
+                flash("¡Registro exitoso! Revisa tu correo (y Spam) y dale al botón para verificar tu cuenta.", "exito")
+                return redirect(url_for('login'))
+            else:
+                flash("Error al enviar el correo. Intenta de nuevo.", "error")
+
+    return render_template('registro.html')
+
+# --------------------------------------------------
 
 @app.route('/verificar/<token>')
 def verificar(token):
@@ -143,7 +147,7 @@ def verificar(token):
             usuarios[correo]['verificado'] = True
             usuarios[correo]['token'] = None 
             guardar_usuarios(usuarios)
-            session['usuario'] = correo # Los logueamos directamente
+            session['usuario'] = correo 
             session.permanent = True
             return redirect(url_for('index'))
     return "Enlace inválido o expirado."
@@ -153,8 +157,6 @@ def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
-
-# --- SISTEMA DE AUTODESTRUCCIÓN ---
 def cargar_expiraciones():
     if os.path.exists(ARCHIVO_EXPIRACIONES):
         with open(ARCHIVO_EXPIRACIONES, 'r') as f:
@@ -194,7 +196,6 @@ def limpiar_expirados():
 def vigilante_de_tiempo():
     limpiar_expirados()
 
-# --- ESTADÍSTICAS ---
 def obtener_fecha_hoy(): return datetime.now().strftime("%Y-%m-%d")
 
 def cargar_estadisticas():
@@ -214,7 +215,6 @@ def cargar_estadisticas():
 def guardar_estadisticas(data):
     with open(ARCHIVO_STATS, 'w') as f: json.dump(data, f)
 
-# --- ESCÁNER JERÁRQUICO ---
 def obtener_siguiente_numero():
     max_num = 0
     for root, dirs, files in os.walk(CARPETA_VIDEOS_RAIZ):
@@ -277,7 +277,6 @@ def obtener_lista_carpetas_flat():
         if root != CARPETA_VIDEOS_RAIZ: carpetas.append(os.path.relpath(root, CARPETA_VIDEOS_RAIZ).replace('\\', '/'))
     return carpetas
 
-# --- RUTAS PÚBLICAS PROTEGIDAS (Solo los registrados ven esto) ---
 @app.route('/')
 @login_requerido
 def index():
@@ -319,9 +318,7 @@ def download_video(filename):
     respuesta.headers["Expires"] = "0"
     return respuesta
 
-# --- RUTAS DE ADMIN PROTEGIDAS (Solo TU CORREO puede ver esto) ---
 @app.route('/admin-stats')
-@admin_requerido
 def panel_admin_stats():
     with cerrojo_stats: data = cargar_estadisticas()
     descargas = data["descargas"]
@@ -343,7 +340,6 @@ def panel_admin_stats():
     return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy, visitas=visitas_hoy)
 
 @app.route('/editor-visual')
-@admin_requerido
 def editor_visual():
     subcarpeta_a_ver = request.args.get('carpeta', default='')
     contenido = escanear_contenido_carpeta(subcarpeta_a_ver)
@@ -351,7 +347,6 @@ def editor_visual():
     return render_template('editor.html', carpetas=contenido["carpetas"], videos=contenido["videos"], carpeta_actual=subcarpeta_a_ver, todas_las_carpetas=todas_las_carpetas)
 
 @app.route('/admin/crear-carpeta', methods=['POST'])
-@admin_requerido
 def crear_carpeta():
     carpeta_padre_actual = request.form.get('carpeta_actual', '')
     nueva_carpeta_nombre = request.form.get('nombre_carpeta')
@@ -369,7 +364,6 @@ def crear_carpeta():
     return redirect(url_for('editor_visual', carpeta=carpeta_padre_actual))
 
 @app.route('/admin/subir-video', methods=['POST'])
-@admin_requerido
 def subir_video():
     carpeta_actual = request.form.get('carpeta_actual', '')
     videos_files = request.files.getlist('video_file') 
@@ -394,7 +388,6 @@ def subir_video():
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
 @app.route('/admin/mover-video', methods=['POST'])
-@admin_requerido
 def mover_video():
     ruta_video_origen_web = request.form.get('video_origen') 
     carpeta_destino_web = request.form.get('carpeta_destino')
@@ -418,7 +411,6 @@ def mover_video():
     return redirect(url_for('editor_visual', carpeta=carpeta_vista_actual))
 
 @app.route('/admin/eliminar', methods=['POST'])
-@admin_requerido
 def eliminar_item():
     item_ruta = request.form.get('item_ruta') 
     tipo = request.form.get('tipo') 

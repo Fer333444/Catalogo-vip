@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Cuenta VIP</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px;}
+        .login-box { background: #111; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border: 1px solid #333; width: 100%; max-width: 400px; text-align: center;}
+        h2 { color: #f5c518; margin-top: 0; text-transform: uppercase; letter-spacing: 2px;}
+        
+        input { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; font-size: 1em;}
+        input:focus { outline: none; border-color: #f5c518; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s;}
+        
+        .btn-registro { background-color: transparent; border: 2px solid #f5c518; color: #f5c518; margin-bottom: 15px;}
+        .btn-registro:hover { background-color: #f5c518; color: #000; }
+        
+        .enlace-login { display: block; margin-top: 20px; color: #aaa; text-decoration: none; font-size: 0.9em; }
+        .enlace-login span { color: #f5c518; font-weight: bold; }
+        .enlace-login:hover span { text-decoration: underline; }
+        
+        .nota { color: #666; font-size: 0.85em; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Crear Cuenta</h2>
+    <p style="color:#888; margin-bottom: 30px;">Crea una cuenta gratis para desbloquear todo el catálogo.</p>
+
+    <form method="POST" action="/registro">
+        <input type="email" name="correo" placeholder="Correo Electrónico" required>
+        <input type="password" name="password" placeholder="Crea una Contraseña" required>
+        
+        <button type="submit" class="btn-registro">Crear Cuenta Nueva</button>
+    </form>
+    
+    <div class="nota">Al registrarte, te enviaremos un correo para verificar que eres tú. Revisa la carpeta de Spam.</div>
+    
+    <a href="/login" class="enlace-login">¿Ya tienes cuenta? <span>Inicia sesión aquí</span></a>
+</div>
+
+</body>
+</html>
