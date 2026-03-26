@@ -2,147 +2,160 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Edición VIP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Editor Visual - Publicidad Vip</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; padding: 20px; margin: 0; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .header-titulo { color: #f5c518; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; margin-bottom: 30px; }
-        
-        /* Paneles de Control */
-        .panel { background: #111; border: 1px solid #333; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .panel h2 { color: #f5c518; margin-top: 0; font-size: 1.3em; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;}
-        
-        /* Formularios */
-        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9em; font-weight: bold;}
-        input[type="text"], input[type="file"], select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; box-sizing: border-box; font-size: 1em; }
-        input[type="file"] { border: 1px dashed #f5c518; background: #1a1a1a; cursor: pointer; }
-        
-        button.btn-principal { width: 100%; background-color: #f5c518; color: #0a0a0a; font-weight: bold; font-size: 1.1em; padding: 12px; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        button.btn-principal:hover { background-color: #e0b416; transform: translateY(-2px); }
-        
-        /* Navegación */
-        .ruta-actual { background: #222; padding: 15px; border-radius: 8px; font-size: 1.1em; margin-bottom: 20px; border: 1px solid #444; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .header-section { max-width: 1000px; width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #333; }
+        h1 { color: #f5c518; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 1.5em;}
+        .container { max-width: 1000px; width: 100%; box-sizing: border-box;}
+        .form-panel { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; margin-bottom: 25px;}
+        .form-panel h3 { color: #ccc; margin-top: 0; margin-bottom: 20px; font-size: 1.1em;}
+        .form-row { display: grid; grid-template-columns: 2fr 1fr auto; gap: 15px; align-items: center; margin-bottom: 15px; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+        input, select { padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; box-sizing: border-box; width: 100%; }
+        input:focus, select:focus { outline: none; border-color: #f5c518;}
+        .btn { padding: 12px 20px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; text-decoration: none; transition: 0.2s; text-align: center; font-size: 1em; }
+        .btn-crear { background-color: #f5c518; color: #000; }
+        .btn-crear:hover { background-color: #e0b416; }
+        .btn-subir { background-color: #00C851; color: #fff; width: 100%;}
+        .btn-subir:hover { background-color: #00993a; }
+        .btn-volver { background-color: #333; color: #fff; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8em; }
+        .btn-volver:hover { background-color: #444; }
+        .ruta-actual { background: #1a1a1a; color: #888; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; font-size: 0.9em; }
         .ruta-actual b { color: #f5c518; }
-        .btn-volver { display: inline-block; background: #333; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; margin-top: 10px; transition: 0.2s; }
-        .btn-volver:hover { background: #555; }
+        .ruta-actual a { color: #ccc; text-decoration: none;}
 
-        /* Grilla de Contenidos */
-        .grid-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .tarjeta-item { background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 15px; text-align: center; display: flex; flex-direction: column; }
-        .icono { font-size: 3em; margin-bottom: 10px; color: #f5c518; }
-        .titulo-item { font-size: 1em; font-weight: bold; color: #fff; margin-bottom: 15px; word-break: break-all; flex-grow: 1; }
-        
-        .btn-eliminar { background: #ff3333; color: white; border: none; padding: 8px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-eliminar:hover { background: #cc0000; }
-        
-        select.mover-select { padding: 8px; font-size: 0.9em; margin-bottom: 10px; background: #333; border: 1px solid #555; }
+        /* Grid de Contenido en el Editor */
+        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 25px; }
+        @media (max-width: 500px) { .content-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+        .tarjeta-item { background: #111; border-radius: 12px; border: 1px solid #222; overflow: hidden; position: relative; display: flex; flex-direction: column; height: 100%; transition: border-color 0.2s;}
+        .tarjeta-item:hover { border-color: #f5c518;}
+        .icono-carpeta { font-size: 4em; color: #f5c518; text-align: center; margin: 30px 0;}
+        @media (max-width: 500px) { .icono-carpeta { font-size: 3em; margin: 20px 0;} }
+        .portada-preview { width: 100%; aspect-ratio: 16/9; background: #000; overflow: hidden; position: relative;}
+        .portada-preview video, .portada-preview img { width: 100%; height: 100%; object-fit: cover; display: block;}
+        .item-info { padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .item-titulo { color: #fff; font-size: 0.85em; font-weight: bold; margin: 0 0 10px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        @media (max-width: 500px) { .item-titulo { font-size: 0.75em; } }
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn-small { padding: 8px 10px; font-size: 0.8em; border-radius: 6px; text-decoration: none; border: none; cursor: pointer; text-align: center; font-weight: bold; width: 100%; box-sizing: border-box;}
+        .btn-eliminar { background: transparent; color: #ff4444; border: 1px solid #ff4444; }
+        .btn-eliminar:hover { background: #ff4444; color: #fff; }
+        .btn-mover { background: #333; color: #ccc; border: 1px solid #444; }
+        .btn-mover:hover { background: #444; color: #fff; }
+
+        /* --- ESTILOS DEL TEMPORIZADOR ROJO (TAMBIÉN EN EL EDITOR) --- */
+        .badge-tiempo { position: absolute; top: 6px; right: 6px; background: #ff3333; color: white; padding: 4px 8px; border-radius: 20px; font-size: 0.75em; font-weight: 900; box-shadow: 0 3px 10px rgba(0,0,0,0.8); z-index: 20; border: 1px solid #0a0a0a; display: flex; align-items: center; gap: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+        @media (max-width: 500px) { .badge-tiempo { font-size: 0.65em; padding: 3px 6px; } }
+        .reloj-analogo { width: 12px; height: 12px; border: 1.5px solid white; border-radius: 50%; position: relative; display: inline-block; background-color: rgba(255, 255, 255, 0.15); overflow: hidden; }
+        .reloj-analogo .aguja { width: 1.5px; height: 5px; background: white; position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg); border-radius: 1px; z-index: 10; }
+        .reloj-analogo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(white var(--grados, 0deg), transparent var(--grados, 0deg)); z-index: 1; }
+        @keyframes titilar { 0% { background: #ff3333; } 50% { background: #990000; } 100% { background: #ff3333; } }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h1 class="header-titulo">⚙️ Panel de Edición VIP</h1>
-
-    <!-- FORMULARIOS DE SUBIDA Y CREACIÓN -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-        
-        <!-- PANEL SUBIR ARCHIVOS (AQUÍ ESTÁ LA SUBIDA MÚLTIPLE) -->
-        <div class="panel">
-            <h2>📤 Subir Nuevos Videos/Fotos</h2>
-            <form action="/admin/subir-video" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
-                
-                <label>Seleccionar Archivos (Puedes elegir varios):</label>
-                <!-- EL INPUT CON MULTIPLE AGREGADO -->
-                <input type="file" name="video_file" id="video_file" accept="video/*,image/*" multiple required>
-                
-                <label>Temporizador (Ej: 24h, 30m, o 0 para siempre):</label>
-                <input type="text" name="tiempo_limite" value="0" placeholder="0 = Sin límite" required>
-                
-                <button type="submit" class="btn-principal" onclick="this.innerText='Subiendo... Por favor espera';">Subir Archivos</button>
-            </form>
-        </div>
-
-        <!-- PANEL CREAR CARPETA -->
-        <div class="panel">
-            <h2>📁 Crear Nueva Carpeta</h2>
-            <form action="/admin/crear-carpeta" method="POST">
-                <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
-                
-                <label>Nombre de la carpeta:</label>
-                <input type="text" name="nombre_carpeta" placeholder="Ej: Estrenos Diciembre" required>
-                
-                <label>Temporizador (Ej: 24h, 30m, o 0 para siempre):</label>
-                <input type="text" name="tiempo_limite" value="0" placeholder="0 = Sin límite" required>
-                
-                <button type="submit" class="btn-principal" style="background-color: #4CAF50; color: white;">Crear Carpeta</button>
-            </form>
-        </div>
+    <div class="header-section">
+        <h1>🛠️ Editor Visual</h1>
+        <a href="/" class="btn btn-volver">⬅️ Salir al Catálogo</a>
     </div>
-
-    <!-- NAVEGACIÓN DE CARPETAS -->
-    <div class="ruta-actual">
-        📍 Estás en: <b>{{ carpeta_actual if carpeta_actual != '' else 'Carpeta Principal (Raíz)' }}</b>
-        <br>
-        {% if carpeta_actual != '' %}
-            {% set partes_ruta = carpeta_actual.split('/') %}
-            {% set ruta_padre = partes_ruta[:-1]|join('/') %}
-            <a href="/editor-visual?carpeta={{ ruta_padre }}" class="btn-volver">⬅️ Volver a la carpeta anterior</a>
-        {% endif %}
-    </div>
-
-    <!-- GRILLA DE GESTIÓN DE ARCHIVOS -->
-    <div class="grid-galeria">
-        <!-- Carpetas -->
-        {% for carpeta in carpetas %}
-            <div class="tarjeta-item">
-                <a href="/editor-visual?carpeta={{ carpeta.ruta_relativa }}" style="text-decoration: none; display:contents;">
-                    <div class="icono">📁</div>
-                    <div class="titulo-item">{{ carpeta.nombre }}</div>
-                </a>
-                <form action="/admin/eliminar" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar esta CARPETA COMPLETA con todo su contenido?');">
-                    <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
-                    <input type="hidden" name="item_ruta" value="{{ carpeta.ruta_relativa }}">
-                    <input type="hidden" name="tipo" value="carpeta">
-                    <button type="submit" class="btn-eliminar">🗑️ Borrar Carpeta</button>
-                </form>
+    <div class="container">
+        <form method="POST" action="/admin/crear-carpeta" class="form-panel">
+            <h3>📂 Crear nueva carpeta</h3>
+            <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+            <div class="form-row">
+                <input type="text" name="nombre_carpeta" placeholder="Nombre de la carpeta" required>
+                <select name="tiempo_limite">
+                    <option value="0">∞ Tiempo ilimitado</option>
+                    <option value="15m">15 minutos</option>
+                    <option value="1h">1 hora</option>
+                    <option value="24h">24 horas</option>
+                    <option value="48h">48 horas</option>
+                </select>
+                <button type="submit" class="btn btn-crear">+ Crear</button>
             </div>
-        {% endfor %}
-
-        <!-- Videos / Fotos -->
-        {% for video in videos %}
-            <div class="tarjeta-item">
-                <div class="icono">{% if video.tipo == 'foto' %}📷{% else %}🎬{% endif %}</div>
-                <div class="titulo-item">{{ video.titulo }}</div>
-                
-                <!-- Opcion para Mover -->
-                <form action="/admin/mover-video" method="POST">
-                    <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
-                    <input type="hidden" name="video_origen" value="{{ video.ruta_completa_descarga }}">
-                    <select name="carpeta_destino" class="mover-select" onchange="this.form.submit()">
-                        <option value="">🚚 Mover a...</option>
-                        <option value="Raiz">Carpeta Principal (Raíz)</option>
-                        {% for c_disp in todas_las_carpetas %}
-                            {% if c_disp != carpeta_actual %}
-                                <option value="{{ c_disp }}">{{ c_disp }}</option>
-                            {% endif %}
-                        {% endfor %}
+        </form>
+        <form method="POST" action="/admin/subir-video" enctype="multipart/form-data" class="form-panel" style="border-color: #00C851;">
+            <h3 style="color: #00C851;">▶️ Subir nuevos videos o fotos</h3>
+            <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+            <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 15px;">
+                <input type="file" name="video_file" multiple required style="background: transparent; padding: 10px; border: 1px dashed #444;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <select name="tiempo_limite">
+                        <option value="0">∞ Tiempo ilimitado</option>
+                        <option value="15m">15 minutos</option>
+                        <option value="1h">1 hora</option>
+                        <option value="24h">24 horas</option>
+                        <option value="48h">48 horas</option>
                     </select>
-                </form>
-                
-                <!-- Opcion para Eliminar -->
-                <form action="/admin/eliminar" method="POST" onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar este archivo?');">
-                    <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
-                    <input type="hidden" name="item_ruta" value="{{ video.ruta_completa_descarga }}">
-                    <input type="hidden" name="tipo" value="video">
-                    <button type="submit" class="btn-eliminar">🗑️ Borrar</button>
-                </form>
+                    <button type="submit" class="btn btn-subir">⬆️ Iniciar Subida</button>
+                </div>
             </div>
-        {% endfor %}
+        </form>
+        <div class="ruta-actual">
+            <a href="/editor-visual">Principal (Raiz)</a>
+            {% if carpeta_actual %}{% set ruta_parcial = "" %}{% for parte in carpeta_actual.split('/') %}{% set ruta_parcial = (ruta_parcial + '/' + parte) if ruta_parcial else parte %} / <a href="/editor-visual?carpeta={{ ruta_parcial }}">{{ parte }}</a>{% endfor %}{% endif %}
+            / <b>{{ escanear_contenido_carpeta(carpeta_actual)['carpetas']|length + escanear_contenido_carpeta(carpeta_actual)['videos']|length }} ítems</b>
+        </div>
+        <div class="content-grid">
+            {% for c in carpetas %}
+            <div class="tarjeta-item">
+                <a href="/editor-visual?carpeta={{ c.ruta_relativa }}" style="text-decoration: none;">
+                    <div class="icono-carpeta">📁</div>
+                </a>
+                <div class="item-info">
+                    <h4 class="item-titulo">{{ c.nombre }}</h4>
+                    <form method="POST" action="/admin/eliminar" onsubmit="return confirm('¿Borrar carpeta {{ c.nombre }} y todo su contenido definitivamente?');">
+                        <input type="hidden" name="item_ruta" value="{{ c.ruta_relativa }}">
+                        <input type="hidden" name="tipo" value="carpeta">
+                        <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+                        <button type="submit" class="btn-small btn-eliminar">🗑️ Eliminar</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% for v in videos %}
+            <div class="tarjeta-item tarjeta-video">
+                {% if v.timestamp_exp > 0 %}
+                <div class="badge-tiempo contador-live" data-expira="{{ v.timestamp_exp }}" data-total="{{ v.total_segundos }}">
+                    <div class="reloj-analogo"><div class="aguja"></div></div>
+                    <span class="tiempo-texto">--:--</span>
+                </div>
+                {% endif %}
+                <div class="portada-preview">
+                    {% if v.tipo == 'foto' %}
+                        <img src="/media/{{ v.ruta_completa_descarga }}" alt="Foto">
+                    {% else %}
+                        <video loop muted playsinline autoplay style="pointer-events: none;">
+                            <source src="/media/{{ v.ruta_completa_descarga }}" type="video/mp4">
+                        </video>
+                    {% endif %}
+                </div>
+                <div class="item-info">
+                    <h4 class="item-titulo">{{ v.titulo }}</h4>
+                    <div class="action-btns">
+                        <form method="GET" action="/admin/mover-video" style="display:inline;">
+                            <input type="hidden" name="video_origen" value="{{ v.ruta_completa_descarga }}">
+                            <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+                            <button type="button" class="btn-small btn-mover" onclick="moverVideo('{{ v.ruta_completa_descarga }}', '{{ v.archivo }}');">Mover</button>
+                        </form>
+                        <form method="POST" action="/admin/eliminar">
+                            <input type="hidden" name="item_ruta" value="{{ v.ruta_completa_descarga }}">
+                            <input type="hidden" name="tipo" value="video">
+                            <input type="hidden" name="carpeta_actual" value="{{ carpeta_actual }}">
+                            <button type="submit" class="btn-small btn-eliminar" onclick="return confirm('¿Borrar {{ v.archivo }} definitivamente?');">Borrar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            {% if not carpetas %}<div style="grid-column: 1 / -1; text-align: center; color: #666; padding: 40px; font-size: 0.9em;">Esta carpeta está vacía. Usa los paneles de arriba para agregar contenido.</div>{% endif %}
+            {% endfor %}
+        </div>
     </div>
-
-</div>
-
+    <script>
+        function moverVideo(rutaOrigen, nombreArchivo){ const destino = prompt(`Escribe la ruta de la carpeta de destino para ${nombreArchivo}.\nUsa "Raiz" para mover al inicio, o la ruta completa (ej: MODELOS/CARLA/PREMIUM).\n\nCarpetas disponibles: Raiz, {{ todas_las_carpetas|join(', ') }}`); if(destino){ const form = document.createElement('form'); form.method = 'POST'; form.action = '/admin/mover-video'; form.style.display = 'none'; const fOrigen = document.createElement('input'); fOrigen.type = 'hidden'; fOrigen.name = 'video_origen'; fOrigen.value = rutaOrigen; const fDestino = document.createElement('input'); fDestino.type = 'hidden'; fDestino.name = 'carpeta_destino'; fDestino.value = destino; const fActual = document.createElement('input'); fActual.type = 'hidden'; fActual.name = 'carpeta_actual'; fActual.value = '{{ carpeta_actual }}'; form.appendChild(fOrigen); form.appendChild(fDestino); form.appendChild(fActual); document.body.appendChild(form); form.submit(); } }
+        setInterval(() => { const ahora = Math.floor(Date.now() / 1000); document.querySelectorAll('.contador-live').forEach(badge => { const expira = parseInt(badge.getAttribute('data-expira')); const total = parseInt(badge.getAttribute('data-total')); const restante = expira - ahora; if (restante <= 0) { const tarjeta = badge.closest('.tarjeta-video'); if(tarjeta) { tarjeta.style.transform = "scale(0)"; tarjeta.style.opacity = "0"; setTimeout(() => tarjeta.remove(), 400); } } else { let h = Math.floor(restante / 3600), m = Math.floor((restante % 3600) / 60), s = restante % 60; let texto = ""; if (h > 0) texto += (h < 10 ? "0"+h : h) + ":"; texto += (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s); badge.querySelector('.tiempo-texto').innerText = texto; let pasado = total - restante; let grados = (pasado / total) * 360; badge.querySelector('.aguja').style.transform = `translateX(-50%) rotate(${grados}deg)`; badge.querySelector('.reloj-analogo').style.setProperty('--grados', `${grados}deg`); if (restante < 60) { badge.style.animation = "titilar 1s infinite"; } else { badge.style.animation = "none"; } } }); }, 1000);
+    </script>
 </body>
 </html>

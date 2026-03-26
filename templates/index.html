@@ -6,36 +6,24 @@
     <title>Publicidad Vip</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
-        
-        /* Contenedor Principal con límite de ancho para laptops grandes */
         .main-wrapper { max-width: 1200px; width: 100%; margin: 0 auto; box-sizing: border-box; flex: 1; display: flex; flex-direction: column;}
-
-        /* Alertas y Mensajes */
         .alert-section { padding: 0 15px; width: 100%; box-sizing: border-box;}
         .alert { padding: 15px; border-radius: 8px; margin-top: 15px; font-weight: bold; text-align: center; font-size: 0.9em;}
         .alert.error { background-color: #330000; border: 1px solid #ff4444; color: #ff8888; }
         .alert.exito { background-color: #003311; border: 1px solid #00C851; color: #88ffaa; }
-
-        /* Contenido Principal espaciado */
         .container { padding: 0 15px 30px 15px; width: 100%; box-sizing: border-box; flex: 1; display: flex; flex-direction: column;}
-        
-        /* Sección de Ruta/Navegación (Breadcrumbs) */
         .ruta-actual { color: #888; margin-bottom: 25px; font-size: 0.95em; background: #111; padding: 12px 18px; border-radius: 8px; border: 1px solid #222; text-align: left; }
         .ruta-actual a { color: #888; text-decoration: none; transition: 0.2s; }
         .ruta-actual a:hover { color: #f5c518; }
         .ruta-actual b { color: #f5c518; }
 
-        /* --- SISTEMA DE GRID RESPONSIVO (La Magia) --- */
+        /* SISTEMA DE GRID RESPONSIVO */
         .grid-contenido { display: grid; gap: 15px; }
-        
-        /* Diseño para laptops (mínimo 992px) */
         @media (min-width: 992px) { .grid-contenido { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
-        /* Diseño para tablets (mínimo 600px) */
         @media (min-width: 600px) and (max-width: 991px) { .grid-contenido { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
-        /* Diseño para móviles (menos de 600px) - 2 Columnas obligatorias */
         @media (max-width: 599px) { .grid-contenido { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
 
-        /* --- Diseño de Tarjetas --- */
+        /* Diseño de Tarjetas */
         .tarjeta-item { background: #111; border-radius: 12px; border: 1px solid #2a2a2a; display: flex; flex-direction: column; position: relative; text-decoration: none; transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease; overflow: hidden; height: 100%; box-sizing: border-box; }
         .tarjeta-item:hover { transform: translateY(-4px); border-color: #f5c518; box-shadow: 0 6px 15px rgba(245, 197, 24, 0.15); }
 
@@ -43,66 +31,51 @@
         .tarjeta-carpeta { align-items: center; justify-content: center; padding: 25px 15px; aspect-ratio: 16/10; }
         .icono-carpeta { font-size: 4.2em; color: #f5c518; margin-bottom: 15px; }
         .titulo-carpeta { color: #f5c518; font-weight: bold; text-transform: uppercase; text-align: center; font-size: 1.05em; word-break: break-all; margin: 0; }
-        
-        /* Ajuste de carpeta en móvil para 2 columnas */
         @media (max-width: 599px) { .tarjeta-carpeta { padding: 15px 10px; } .icono-carpeta { font-size: 3.5em; margin-bottom: 10px; } .titulo-carpeta { font-size: 0.9em; } }
 
         /* Tarjeta de Video */
         .tarjeta-video { height: 100%; }
-        .portada-wrapper { width: 100%; position: relative; overflow: hidden; border-radius: 11px 11px 0 0; background-color: #000; aspect-ratio: 16/9; /* Proporción estándar de video */ }
+        .portada-wrapper { width: 100%; position: relative; overflow: hidden; border-radius: 11px 11px 0 0; background-color: #000; aspect-ratio: 16/9; }
         .portada-video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .titulo-video { color: #fff; font-size: 0.9em; text-align: center; padding: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #111; font-weight: bold; }
-        
-        /* Ajuste de video en móvil */
-        @media (max-width: 599px) { .portada-wrapper { aspect-ratio: 9/16; /* Proporción móvil vertical */ } .titulo-video { font-size: 0.8em; padding: 10px; } }
+        @media (max-width: 599px) { .portada-wrapper { aspect-ratio: 9/16; } .titulo-video { font-size: 0.8em; padding: 10px; } }
+
+        /* --- ESTILOS DEL TEMPORIZADOR ROJO --- */
+        .badge-tiempo { position: absolute; top: 8px; right: 8px; background: #ff3333; color: white; padding: 6px 12px; border-radius: 25px; font-size: 0.85em; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.8); z-index: 20; border: 2px solid #0a0a0a; display: flex; align-items: center; gap: 7px; letter-spacing: 1px; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+        .reloj-analogo { width: 16px; height: 16px; border: 2px solid white; border-radius: 50%; position: relative; display: inline-block; background-color: rgba(255, 255, 255, 0.15); overflow: hidden; }
+        .reloj-analogo .aguja { width: 2px; height: 7px; background: white; position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(0deg); border-radius: 2px; z-index: 10; }
+        .reloj-analogo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: conic-gradient(white var(--grados, 0deg), transparent var(--grados, 0deg)); z-index: 1; }
+        @keyframes titilar { 0% { background: #ff3333; } 50% { background: #990000; transform: scale(1.1); } 100% { background: #ff3333; } }
 
     </style>
 </head>
 <body>
-
     <div class="main-wrapper">
-        
-        
-<div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #333; margin-bottom: 15px; background-color: #111; width: 100%; box-sizing: border-box; border-radius: 0 0 10px 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #333; margin-bottom: 15px; background-color: #111; width: 100%; box-sizing: border-box; border-radius: 0 0 10px 10px;">
             <div style="width: 120px;"></div>
-            <h1 style="color: #f5c518; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 1.6em; font-weight: 900;">Publicidad Vip</h1>
-            <a href="/perfil" style="display: flex; align-items: center; justify-content: center; width: 45px; height: 45px; border-radius: 50%; background-color: #1a1a1a; color: #f5c518; border: none; text-decoration: none; transition: 0.3s; font-size: 20px; box-sizing: border-box; padding: 0;" onmouseover="this.style.backgroundColor='#333'; this.style.color='#f5c518'" onmouseout="this.style.backgroundColor='#1a1a1a'; this.style.color='#f5c518'">
-                👤
-            </a>
+            <h1 style="color: #f5c518; margin: 0; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 1.6em; font-weight: 900;">PUBLICIDAD VIP</h1>
+            <a href="/perfil" style="display: flex; align-items: center; justify-content: center; width: 45px; height: 45px; border-radius: 50%; background-color: #1a1a1a; color: #f5c518; border: none; text-decoration: none; transition: 0.3s; font-size: 20px; box-sizing: border-box; padding: 0;" onmouseover="this.style.backgroundColor='#333'; this.style.color='#f5c518'" onmouseout="this.style.backgroundColor='#1a1a1a'; this.style.color='#f5c518'">👤</a>
         </div>
-        
-        
-<div class="alert-section">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert {{ category }}">{{ message }}</div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
+        <div class="alert-section">
+            {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert {{ category }}">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
         </div>
-
-        
-<div class="container">
-            
-            
-{% if carpeta_actual != '' %}
-                <div class="ruta-actual">
-                    <a href="/">Inicio</a> / <b>{{ carpeta_actual }}</b>
-                </div>
-            {% endif %}
-
-            
-<div class="grid-contenido">
+        <div class="container">
+            {% if carpeta_actual != '' %}<div class="ruta-actual"><a href="/">Inicio</a> / <b>{{ carpeta_actual }}</b></div>{% endif %}
+            <div class="grid-contenido">
                 {% for carpeta in carpetas %}
                     <a href="/?carpeta={{ carpeta.ruta_relativa }}" class="tarjeta-item tarjeta-carpeta">
                         <div class="icono-carpeta">📁</div>
                         <h3 class="titulo-carpeta">{{ carpeta.nombre }}</h3>
                     </a>
                 {% endfor %}
-
                 {% for video in videos %}
                 <div class="tarjeta-item tarjeta-video">
+                    {% if video.timestamp_exp > 0 %}
+                    <div class="badge-tiempo contador-live" data-expira="{{ video.timestamp_exp }}" data-total="{{ video.total_segundos }}">
+                        <div class="reloj-analogo"><div class="aguja"></div></div>
+                        <span class="tiempo-texto">--:--</span>
+                    </div>
+                    {% endif %}
                     <a href="/ver/{{ video.ruta_completa_descarga }}" style="display:block; text-decoration:none; height: 100%;">
                         <div class="portada-wrapper">
                             {% if video.tipo == 'foto' %}
@@ -118,15 +91,30 @@
                 </div>
                 {% endfor %}
             </div>
-
-            {% if not carpetas and not videos %}
-                <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #888; padding: 40px; text-align: center; font-size: 1.1em; background: #111; border-radius: 12px; border: 1px solid #222;">
-                    No hay contenido disponible en este momento.
-                </div>
-            {% endif %}
-
+            {% if not carpetas and not videos %}<div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #888; padding: 40px; text-align: center; font-size: 1.1em; background: #111; border-radius: 12px; border: 1px solid #222;">No hay contenido disponible.</div>{% endif %}
         </div>
     </div>
-
+    <script>
+        setInterval(() => {
+            const ahora = Math.floor(Date.now() / 1000); 
+            document.querySelectorAll('.contador-live').forEach(badge => {
+                const expira = parseInt(badge.getAttribute('data-expira'));
+                const total = parseInt(badge.getAttribute('data-total'));
+                const restante = expira - ahora;
+                if (restante <= 0) {
+                    const tarjeta = badge.closest('.tarjeta-carpeta, .tarjeta-video');
+                    if(tarjeta) { tarjeta.style.transform = "scale(0)"; tarjeta.style.opacity = "0"; setTimeout(() => tarjeta.remove(), 400); }
+                } else {
+                    let h = Math.floor(restante / 3600), m = Math.floor((restante % 3600) / 60), s = restante % 60;
+                    let texto = ""; if (h > 0) texto += (h < 10 ? "0"+h : h) + ":"; texto += (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s);
+                    badge.querySelector('.tiempo-texto').innerText = texto;
+                    let pasado = total - restante; let grados = (pasado / total) * 360;
+                    badge.querySelector('.aguja').style.transform = `translateX(-50%) rotate(${grados}deg)`;
+                    badge.querySelector('.reloj-analogo').style.setProperty('--grados', `${grados}deg`);
+                    if (restante < 60) { badge.style.animation = "titilar 1s infinite"; } else { badge.style.animation = "none"; }
+                }
+            });
+        }, 1000);
+    </script>
 </body>
 </html>
