@@ -35,13 +35,13 @@
         
         <div class="video-wrapper">
             {% if video.tipo == 'foto' %}
-                <img src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}" class="media-elemento">
+                <!-- AQUÍ LA CORRECCIÓN DE LA RUTA PARA FOTOS -->
+                <img src="/media/{{ video.ruta_relativa }}" class="media-elemento">
             {% else %}
-                <!-- AQUÍ ESTÁ LA MAGIA: Se agregó id, muted y preload="auto" -->
                 <video id="reproductorVip" controls playsinline autoplay muted preload="auto" class="media-elemento">
-                    <source src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}">
+                    <!-- AQUÍ LA CORRECCIÓN DE LA RUTA PARA VIDEOS -->
+                    <source src="/media/{{ video.ruta_relativa }}">
                 </video>
-                <!-- Este script fuerza el inicio en los iPhones necios -->
                 <script>
                     document.addEventListener('DOMContentLoaded', function() {
                         var videoElement = document.getElementById('reproductorVip');
