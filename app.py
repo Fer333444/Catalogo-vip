@@ -631,7 +631,7 @@ def admin_eliminar_usuario():
     return redirect(url_for('panel_usuarios'))
 @app.route('/media/<path:filename>')
 def serve_media(filename):
-    return send_from_directory(CARPETA_VIDEOS_RAIZ, filename)
+    return send_from_directory(CARPETA_VIDEOS_RA
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
