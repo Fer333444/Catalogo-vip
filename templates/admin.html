@@ -79,15 +79,15 @@
                         <div class="video-info-cell">
                             <div class="mini-portada">
                                 {% if video.tipo == 'foto' %}
-                                    <img src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}" loading="lazy">
+                                    <img src="/media/{{ video.ruta_relativa }}" loading="lazy">
                                 {% else %}
-                                    <!-- El #t=0.1 al final obliga a cargar solo el primer cuadro del video como miniatura -->
-                                    <video preload="metadata" muted playsinline>
-                                        <source src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}#t=0.1">
+                                    <!-- AHORA APUNTA A /MEDIA/ Y TIENE AUTOPLAY/LOOP -->
+                                    <video preload="auto" muted playsinline autoplay loop>
+                                        <source src="/media/{{ video.ruta_relativa }}">
                                     </video>
                                 {% endif %}
                             </div>
-                            <span style="font-weight: bold;">{{ video.titulo }}</span>
+                            <span style="font-weight: bold; text-transform: capitalize;">{{ video.titulo.replace('_', ' ') }}</span>
                         </div>
                     </td>
                     <td style="color:#888;">{{ video.carpeta }}</td>
