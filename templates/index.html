@@ -106,10 +106,10 @@
                     <a href="/ver/{{ video.ruta_completa_descarga }}" style="display:block; text-decoration:none; height: 100%;">
                         <div class="portada-wrapper">
                             {% if video.tipo == 'foto' %}
-                                <img class="portada-video" src="{{ url_for('static', filename='videos/' + video.ruta_completa_descarga) }}" alt="Portada foto">
+                                <img class="portada-video" src="/media/{{ video.ruta_completa_descarga }}" alt="Portada foto">
                             {% else %}
                                 <video class="portada-video" autoplay loop muted playsinline style="pointer-events: none;">
-                                    <source src="{{ url_for('static', filename='videos/' + video.ruta_completa_descarga) }}" type="video/mp4">
+                                    <source src="/media/{{ video.ruta_completa_descarga }}" type="video/mp4">
                                 </video>
                             {% endif %}
                         </div>
