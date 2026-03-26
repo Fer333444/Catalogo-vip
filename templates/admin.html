@@ -10,7 +10,6 @@
         .header-titulo { color: #f5c518; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; margin-bottom: 10px; }
         .fecha-subtitulo { text-align: center; color: #888; margin-bottom: 30px; font-size: 1.1em;}
         
-        /* Prominent visit counter card */
         .panel-visitas { background: linear-gradient(135deg, #111, #222); border-left: 5px solid #f5c518; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(245, 197, 24, 0.1); }
         .visitas-numero { font-size: 4em; font-weight: 900; color: #f5c518; margin: 10px 0; }
         .visitas-texto { color: #aaa; font-size: 1.2em; text-transform: uppercase; letter-spacing: 1px;}
@@ -22,17 +21,44 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
         th { color: #f5c518; font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
         tr:hover { background-color: #1a1a1a; }
-        .badge-descargas { background: #f5c518; color: #000; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 0.9em;}
+        .badge-descargas { background: #f5c518; color: #000; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 1em;}
+        
+        /* CSS PARA LAS MINIATURAS */
+        .video-info-cell {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .mini-portada {
+            width: 50px;
+            height: 70px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #000;
+            flex-shrink: 0;
+            border: 1px solid #333;
+        }
+        .mini-portada img, .mini-portada video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .btn-volver { display: inline-block; background: #333; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; transition: 0.2s; margin-bottom: 20px;}
+        .btn-volver:hover { background: #f5c518; color: #000;}
     </style>
 </head>
 <body>
 
 <div class="container">
+    <a href="/editor-visual" class="btn-volver">⬅️ Ir al Editor Visual</a>
+
     <h1 class="header-titulo">📊 Reporte Diario</h1>
     <div class="fecha-subtitulo">Datos recopilados el: {{ fecha }}</div>
 
     <div class="panel-visitas">
-        <div class="visitas-texto">👁️ DAILY PAGE VISITS</div>
+        <div class="visitas-texto">👁️ PERSONAS QUE ABRIERON EL ENLACE HOY</div>
         <div class="visitas-numero">{{ visitas }}</div>
     </div>
 
@@ -42,21 +68,37 @@
             <thead>
                 <tr>
                     <th>Video / Archivo</th>
+                    <th>Carpeta</th>
                     <th style="text-align: right;">Total Descargas</th>
                 </tr>
             </thead>
             <tbody>
                 {% for video in videos %}
                 <tr>
-                    <td>{{ video.titulo }}</td>
+                    <td>
+                        <div class="video-info-cell">
+                            <div class="mini-portada">
+                                {% if video.tipo == 'foto' %}
+                                    <img src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}" loading="lazy">
+                                {% else %}
+                                    <!-- El #t=0.1 al final obliga a cargar solo el primer cuadro del video como miniatura -->
+                                    <video preload="metadata" muted playsinline>
+                                        <source src="{{ url_for('static', filename='videos/' + video.ruta_relativa) }}#t=0.1">
+                                    </video>
+                                {% endif %}
+                            </div>
+                            <span style="font-weight: bold;">{{ video.titulo }}</span>
+                        </div>
+                    </td>
+                    <td style="color:#888;">{{ video.carpeta }}</td>
                     <td style="text-align: right;">
                         <span class="badge-descargas">{{ video.descargas }}</span>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="2" style="text-align: center; color: #666; padding: 30px;">
-                        No recorded downloads yet today.
+                    <td colspan="3" style="text-align: center; color: #666; padding: 30px;">
+                        Aún no hay videos en el catálogo para registrar descargas.
                     </td>
                 </tr>
                 {% endfor %}

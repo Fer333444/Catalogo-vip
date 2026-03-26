@@ -15,16 +15,15 @@ ARCHIVO_EXPIRACIONES = 'expiraciones.json'
 CARPETA_INFORMES = 'informes_diarios'
 CARPETA_VIDEOS_RAIZ = os.path.join('static', 'videos')
 
-# ALLOWED EXTENSIONS
+# EXTENSIONES PERMITIDAS
 EXT_VIDEOS = ('.mp4', '.mov')
 EXT_FOTOS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 EXT_MEDIA = EXT_VIDEOS + EXT_FOTOS
 
-# Standard folder setup
 for carpeta in [CARPETA_INFORMES, CARPETA_VIDEOS_RAIZ]:
     if not os.path.exists(carpeta): os.makedirs(carpeta)
 
-# --- SELF-DESTRUCTION SYSTEM ---
+# --- SISTEMA DE AUTODESTRUCCIÓN ---
 def cargar_expiraciones():
     if os.path.exists(ARCHIVO_EXPIRACIONES):
         with open(ARCHIVO_EXPIRACIONES, 'r') as f:
@@ -69,12 +68,11 @@ def limpiar_expirados():
 def vigilante_de_tiempo():
     limpiar_expirados()
 
-# --- STATISTICS AND VISITS ---
+# --- ESTADÍSTICAS Y VISITAS ---
 def obtener_fecha_hoy(): return datetime.now().strftime("%Y-%m-%d")
 
 def cargar_estadisticas():
     hoy = obtener_fecha_hoy()
-    # Updated standard structure to include 'visitas' starting at 0
     stats_default = {"fecha": hoy, "descargas": {}, "visitas": 0}
     
     if os.path.exists(ARCHIVO_STATS):
@@ -82,12 +80,10 @@ def cargar_estadisticas():
             try: data = json.load(f)
             except: data = stats_default
             
-            # If the day has changed, generate the daily report and reset daily stats
             if data.get("fecha") != hoy and "fecha" in data:
                 generar_informe(data)
                 return stats_default
                 
-            # Compatibility handling for older stats files without 'visitas' or standard structure
             if "fecha" not in data: data["fecha"] = hoy
             if "descargas" not in data: data["descargas"] = {}
             if "visitas" not in data: data["visitas"] = 0
@@ -98,22 +94,22 @@ def cargar_estadisticas():
 def generar_informe(data_vieja):
     fecha_ayer = data_vieja.get("fecha", "Desconocida")
     descargas = data_vieja.get("descargas", {})
-    visitas = data_vieja.get("visitas", 0) # Get visits
+    visitas = data_vieja.get("visitas", 0)
     
     ruta = os.path.join(CARPETA_INFORMES, f"informe_{fecha_ayer}.txt")
     with open(ruta, 'w', encoding='utf-8') as f:
         f.write(f"=== INFORME VIP ===\nFecha: {fecha_ayer}\n")
-        f.write(f"👁️ DAILY PAGE VISITS: {visitas}\n\n") # Include page visits in daily report
+        f.write(f"👁️ VISITAS TOTALES A LA WEB: {visitas}\n\n")
         
         total = sum(descargas.values())
-        f.write("--- VIDEO DOWNLOAD LOG ---\n")
-        for video, cantidad in descargas.items(): f.write(f"- {video}: {cantidad} downloads\n")
-        f.write(f"\nTOTAL DAILY DOWNLOADS: {total}\n")
+        f.write("--- DESCARGAS DE VIDEOS ---\n")
+        for video, cantidad in descargas.items(): f.write(f"- {video}: {cantidad} descargas\n")
+        f.write(f"\nTOTAL: {total} DESCARGAS\n")
 
 def guardar_estadisticas(data):
     with open(ARCHIVO_STATS, 'w') as f: json.dump(data, f)
 
-# --- JERÁRQUICO ESCÁNER ---
+# --- ESCÁNER JERÁRQUICO ---
 def obtener_siguiente_numero():
     max_num = 0
     for root, dirs, files in os.walk(CARPETA_VIDEOS_RAIZ):
@@ -181,10 +177,9 @@ def obtener_lista_carpetas_flat():
         if root != CARPETA_VIDEOS_RAIZ: carpetas.append(os.path.relpath(root, CARPETA_VIDEOS_RAIZ).replace('\\', '/'))
     return carpetas
 
-# --- PUBLIC ROUTES & ADMIN STATS ---
+# --- RUTAS PÚBLICAS Y ADMIN STATS ---
 @app.route('/')
 def index():
-    # MAGIC: Every time someone lands on the main catalog link, we increment daily page visits
     with cerrojo_stats:
         data = cargar_estadisticas()
         data["visitas"] = data.get("visitas", 0) + 1
@@ -206,7 +201,6 @@ def download_video(filename):
     nombre_limpio_archivo = os.path.basename(filename)
     ruta_fisica = os.path.join(CARPETA_VIDEOS_RAIZ, filename)
     
-    # User's context: Adelanta la fecha del archivo a AHORA when downloading
     if os.path.exists(ruta_fisica): os.utime(ruta_fisica, None)
         
     with cerrojo_stats:
@@ -224,21 +218,31 @@ def download_video(filename):
 
 @app.route('/admin-stats')
 def panel_admin_stats():
-    # Show statistics and visits in the admin panel
     with cerrojo_stats: data = cargar_estadisticas()
     descargas = data["descargas"]
     fecha_hoy = data["fecha"]
-    visitas_hoy = data.get("visitas", 0) # Get visits
+    visitas_hoy = data.get("visitas", 0)
     
     catalogo_flat = obtener_todo_el_catalogo_flat()
     datos_completos = []
+    
+    # Agregamos la ruta_relativa y tipo para que la web pueda cargar la miniatura
     for v in catalogo_flat:
-        datos_completos.append({"titulo": v['titulo'], "carpeta": v['carpeta'], "archivo": v['archivo'], "descargas": descargas.get(v['archivo'], 0)})
+        datos_completos.append({
+            "titulo": v['titulo'], 
+            "carpeta": v['carpeta'], 
+            "archivo": v['archivo'], 
+            "descargas": descargas.get(v['archivo'], 0),
+            "ruta_relativa": v['ruta_relativa'],
+            "tipo": v['tipo']
+        })
         
-    # Send daily page visits to the HTML template
+    # ORDENAR LA LISTA: De más descargas a menos descargas automáticamente
+    datos_completos.sort(key=lambda x: x['descargas'], reverse=True)
+        
     return render_template('admin.html', videos=datos_completos, fecha=fecha_hoy, visitas=visitas_hoy)
 
-# --- EDITOR ROUTES ---
+# --- RUTAS DEL EDITOR ---
 @app.route('/editor-visual')
 def editor_visual():
     subcarpeta_a_ver = request.args.get('carpeta', default='')
@@ -271,7 +275,6 @@ def subir_video():
     videos_files = request.files.getlist('video_file') 
     tiempo_limite = request.form.get('tiempo_limite', '0')
     
-    # User's logic for multiple file upload and auto-naming
     if videos_files:
         siguiente_num = obtener_siguiente_numero()
         exp = cargar_expiraciones()
@@ -288,7 +291,6 @@ def subir_video():
                 ruta_relativa = os.path.join(carpeta_actual, nombre_archivo_seguro).replace('\\', '/')
                 ruta_fisica_guardado = os.path.join(CARPETA_VIDEOS_RAIZ, carpeta_actual, nombre_archivo_seguro)
                 
-                # Save the file with the automatic name (e.g., video_1.mp4)
                 video_file.save(ruta_fisica_guardado)
 
                 if tiempo_limite != '0':
@@ -349,5 +351,4 @@ def eliminar_item():
     return redirect(url_for('editor_visual', carpeta=carpeta_actual))
 
 if __name__ == '__main__':
-    # Local running setup
     app.run(debug=True, host='0.0.0.0', port=5000)
